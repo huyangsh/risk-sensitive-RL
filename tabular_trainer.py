@@ -27,7 +27,7 @@ agent = RFZI_Tabular(env)
 Z_init = np.ones(shape=(env.num_states, env.num_actions), dtype=np.float64)
 agent.reset(Z_init)
 
-T = 10
+T = 1000
 for t in range(T): 
     _, info = agent.update(dataset)
     print(f"loss at {t}: {info['loss']:.6f}, diff = {np.linalg.norm(info['diff']):.6f}.")

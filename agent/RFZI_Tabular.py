@@ -38,10 +38,13 @@ class RFZI_Tabular(Agent):
         
         # Calculate Z_next.
         Z_next = np.zeros_like(self.Z)
+        cnt = np.zeros_like(self.Z)
         for s,a,r,s_ in dataset:
             s, a, s_ = int(s), int(a), int(s_)
             Z_next[s,a] += next_rewards[s_]
-        Z_next /= num_data
+            cnt[s,a] += 1
+        Z_next[np.where(cnt > 0)] /= cnt[np.where(cnt > 0)]
+        Z_next[np.where(cnt == 0)] = self.Z[np.where(cnt == 0)]
 
         # Logging.
         info = {}

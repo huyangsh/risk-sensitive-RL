@@ -41,6 +41,7 @@ class RFZI_NN(Agent):
         self.dim_state      = env.dim_state
         self.dim_action     = env.dim_action
         self.num_actions    = env.num_actions
+        self.action_ids     = list(range(self.num_actions))
         self.actions        = env.actions
 
         self.reward         = env.reward
@@ -71,7 +72,7 @@ class RFZI_NN(Agent):
         self.z_func_target = copy.deepcopy(self.z_func_current)
 
     def update(self, dataset, num_batches, batch_size):
-        test_actions = torch.FloatTensor(self.actions).repeat(batch_size)[:, None]
+        test_actions = torch.FloatTensor(self.action_ids).repeat(batch_size)[:, None]
 
         loss_list = []
         for b in range(num_batches):
@@ -83,7 +84,7 @@ class RFZI_NN(Agent):
             for i in range(batch_size):
                 s_ = next_states[i]
                 for j in range(self.num_actions):
-                    a_ = self.actions[j]
+                    a_ = self.action_ids[j]
                     next_rewards[i, j] = self.reward(s_, a_)
             next_rewards = torch.FloatTensor(next_rewards).flatten().to(self.device)
             
@@ -112,11 +113,13 @@ class RFZI_NN(Agent):
         return {"loss": loss_list}
     
     def select_action(self, state):
-        state_tensor = torch.FloatTensor(state).repeat(repeats=(self.num_actions, 1)).to(self.device)
-        actions_tensor = torch.FloatTensor(self.actions)[:, None]
+        with torch.no_grad():
+            state_tensor = torch.FloatTensor(state).repeat(repeats=(self.num_actions, 1)).to(self.device)
+            actions_tensor = torch.FloatTensor(self.action_ids)[:, None]
 
-        rewards = np.array([self.reward(state, a) for a in self.actions], dtype=np.float32)
-        rewards = rewards - 1/self.beta * self.z_func_target(state_tensor, actions_tensor).cpu().detach().flatten().numpy()
+            rewards = np.array([self.reward(state, a) for a in self.action_ids], dtype=np.float32)
+            rewards = rewards - 1/self.beta * self.z_func_target(state_tensor, actions_tensor).cpu().detach().flatten().numpy()
+        
         return rewards.argmax()
 
     def load(self, filename):

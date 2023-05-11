@@ -41,26 +41,7 @@ class RMDP(Env):
     def step(self, action):
         reward = self.reward[self.state, action]
         self.state = random.choices(self.states, weights=self.prob[self.state,action,:])[0]
-        return self.state, reward
-    
-    def eval(self, agent, T_eval, verbose=False):
-        state = self.reset()
-        reward_tot, g_t = 0, 1
-        if verbose: trajectory = []
-        for t in range(T_eval):
-            action = agent.select_action(state)
-            next_state, reward = self.step(action)
-
-            reward_tot += g_t * reward
-            g_t *= self.gamma
-            if verbose: trajectory.append([state, action, reward, next_state])
-
-            state = next_state
-        
-        if verbose:
-            return reward_tot, trajectory
-        else:
-            return reward_tot
+        return self.state, reward, False, None    # Compatible with the OpenAI gym interface: done = False (non-episodic).
 
 
     # Utility: Bellman updates (using DP). 

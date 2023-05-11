@@ -9,8 +9,10 @@ import math
 import numpy as np
 import warnings
 
+from . import Env
 
-class CartPolePerturbed():
+
+class CartPole(Env):
     """
     Description:
         A pole is attached by an un-actuated joint to a cart, which moves along
@@ -84,10 +86,14 @@ class CartPolePerturbed():
             dtype=np.float32,
         )
 
+
+        # Environment parameters.
         self.dim_state = 4
         self.dim_action = 1
         self.num_actions = 2
         self.actions = [0, 1]
+
+        self.gamma = 1
 
         # Internal states.
         self.state = None
@@ -191,21 +197,3 @@ class CartPolePerturbed():
             reward = 0.0
         
         return reward
-    
-    def eval(self, agent, verbose=False):
-        state, done = self.reset(), False
-        reward_tot = 0.0
-        if verbose: trajectory = []
-        while not done:
-            action = agent.select_action(np.array(state))
-            next_state, reward, done, _ = self.step(action)
-
-            reward_tot += reward
-            if verbose: trajectory.append([state, action, reward, next_state])
-            
-            state = next_state
-        
-        if verbose:
-            return reward_tot, trajectory
-        else:
-            return reward_tot
