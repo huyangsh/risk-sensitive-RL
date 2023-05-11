@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from agent import PolicyGradientAgent
 from env import RMDP
 
+
+THRES = 1e-5
+
 # Build environment.
 num_states  = 14
 num_actions = 3    # 0 = left, 1 = stay, 2 = right.
@@ -36,8 +39,23 @@ T   = int(16*num_actions*M**4 / (((1-gamma)**4) * (eps**2))) * 100
 
 agent = PolicyGradientAgent(env, eta)
 
-pi, loss_list = agent.train(T=T)
-print(loss_list)
+pi_init = np.ones(shape=(env.num_states, env.num_actions), dtype=np.float64) / env.num_actions
+agent.reset(pi_init)
+
+loss_list = []
+for t in range(T):
+    pi, info = agent.update()
+    loss_list.append(info["loss"])
+
+    print(t)
+    print("V_pi", info["V_pi"])
+    print("Q_pi", info["Q_pi"])
+    print("loss", info["loss"])
+    print("pi", pi)
+
+V_pi = env.DP_pi(pi, THRES)
+loss_list.append( env.V_opt_avg - (V_pi*env.distr_init).sum() )
+
 plt.plot(np.arange(0,T+1), loss_list)
 plt.savefig("./fig.png", dpi=200)
 

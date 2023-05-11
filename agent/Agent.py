@@ -2,5 +2,9 @@ from abc import abstractmethod
 
 class Agent:
     @abstractmethod
-    def train(self, T, verbose):
+    def reset(self, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def update(self, dataset, **kwargs):
         raise NotImplementedError

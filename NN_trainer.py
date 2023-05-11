@@ -51,7 +51,7 @@ agent = RFZI_NN(state_dim, action_dim, num_actions, args.device,
 # train RFZI
 T = 1000
 for t in range(T):
-    info = agent.train(data, batch_size=args.batch_size)
+    info = agent.update(data, batch_size=args.batch_size)
     print(f"loss {t} = {info['loss']:.6f}")
 
     if t % 10 == 0:

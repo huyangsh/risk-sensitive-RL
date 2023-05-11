@@ -78,7 +78,7 @@ class RFZI_NN:
         rewards = rewards - 1/self.beta * self.z_func_target(state_torch, actions_torch).cpu().detach().flatten().numpy()
         return rewards.argmax()
 
-    def train(self, data, batch_size=100):
+    def update(self, data, batch_size=100):
         for b in range(100):
             # Sample replay buffer / batch
             state, action, next_state, reward, not_done = data.sample(batch_size)
