@@ -2,16 +2,15 @@
 Classic cart-pole system implemented by Rich Sutton et al.
 Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
+NEW: Adapted from OpenAI Gym.
 """
 
 import math
-import gym
-from gym import spaces, logger
-from gym.utils import seeding
 import numpy as np
+import warnings
 
 
-class CartPolePerturbed(gym.Env):
+class CartPolePerturbed():
     """
     Description:
         A pole is attached by an un-actuated joint to a cart, which moves along
@@ -59,22 +58,22 @@ class CartPolePerturbed(gym.Env):
     """
 
     def __init__(self):
-        self.gravity = 9.8
-        self.masscart = 1.0
-        self.masspole = 0.1
-        self.total_mass = self.masspole + self.masscart
-        self.length = 0.5  # actually half the pole's length
+        self.gravity         = 9.8
+        self.masscart        = 1.0
+        self.masspole        = 0.1
+        self.total_mass      = self.masspole + self.masscart
+        self.length          = 0.5  # actually half the pole's length
         self.polemass_length = self.masspole * self.length
-        self.force_mag = 10.0
-        self.tau = 0.02  # seconds between state updates
+        self.force_mag       = 10.0
+        self.tau             = 0.02  # seconds between state updates
         self.kinematics_integrator = "euler"
 
         # Angle at which to fail the episode
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
-        # Angle limit set to 2 * theta_threshold_radians so failing observation
-        # is still within bounds.
+        # Angle limit set to 2 * theta_threshold_radians
+        # so failing observation is still within bounds.
         high = np.array(
             [
                 self.x_threshold * 2,
@@ -88,16 +87,16 @@ class CartPolePerturbed(gym.Env):
         self.dim_state = 4
         self.dim_action = 1
         self.num_actions = 2
-        self.action_space = spaces.Discrete(2)
+        self.actions = [0, 1]
 
-        self.seed()
+        # Internal states.
         self.state = None
-
         self.steps_beyond_done = None
+
 
     def step(self, action):
         err_msg = "%r (%s) invalid" % (action, type(action))
-        assert self.action_space.contains(action), err_msg
+        assert action in self.actions, err_msg
 
         x, x_dot, theta, theta_dot = self.state
         force = self.force_mag if action == 1 else -self.force_mag
@@ -142,7 +141,7 @@ class CartPolePerturbed(gym.Env):
             reward = 1.0
         else:
             if self.steps_beyond_done == 0:
-                logger.warn(
+                warnings.warn(
                     "You are calling 'step()' even though this "
                     "environment has already returned done = True. You "
                     "should always call 'reset()' once you receive 'done = "
@@ -157,26 +156,24 @@ class CartPolePerturbed(gym.Env):
               init_angle_mag=0.05, init_vel_mag=0.05):
         # set seed if any
         if seed is not None:
-            super().reset(seed=seed)
-#             self.np_random, seed = seeding.np_random(seed)
+            np.random.seed(seed)
+
         # perturbing the environment
-        self.gravity = gravity
-        self.force_mag = force_mag
-        self.length = length
+        self.gravity         = gravity
+        self.force_mag       = force_mag
+        self.length          = length
         self.polemass_length = self.masspole * self.length
-        init_angle = np.random.uniform(-init_angle_mag, init_angle_mag)
-        init_vel = np.random.uniform(-init_vel_mag, init_vel_mag)
+        init_angle           = np.random.uniform(-init_angle_mag, init_angle_mag)
+        init_vel             = np.random.uniform(-init_vel_mag, init_vel_mag)
         # build state
         # self.state[2] is initial angle
         # self.state[3] is initial velocity
 
-        # self.np_random
         self.state = np.random.uniform(low=-0.05, high=0.05, size=(4,)) # changed from 4 to 2
         self.state[2] = init_angle
         self.state[3] = init_vel
         self.steps_beyond_done = None
         return np.array(self.state, dtype=np.float32)
-    
 
     def reward(self, state, action):
         x, x_dot, theta, theta_dot = tuple(state)
@@ -187,7 +184,7 @@ class CartPolePerturbed(gym.Env):
             or theta > self.theta_threshold_radians
         )
 
-        # This is actually problematic: the cartpole env does not encode everything in the state.
+        # Warning: cannot identify whether the pole has just fallen or not.
         if not done:
             reward = 1.0
         else:
@@ -195,20 +192,20 @@ class CartPolePerturbed(gym.Env):
         
         return reward
     
-    def eval(self, agent, T_eval, verbose=True):
-        rewards = []
+    def eval(self, agent, verbose=False):
+        state, done = self.reset(), False
+        reward_tot = 0.0
+        if verbose: trajectory = []
+        while not done:
+            action = agent.select_action(np.array(state))
+            next_state, reward, done, _ = self.step(action)
 
-        for t in range(T_eval):
-            state, done = self.reset(), False  # seed=np.random.randint(100000)
-            eps_reward = 0.0
-            while not done:
-                action = agent.select_action(np.array(state))
-                state, reward, done, _ = self.step(action)
-                eps_reward += reward
-            rewards.append(eps_reward)
-        avg, std = np.average(rewards), np.std(rewards)
-        print("---------------------------------------")
-        print(f"Evaluation over {T_eval} episodes")
-        print(rewards)
-        print("---------------------------------------")
-        return avg, std
+            reward_tot += reward
+            if verbose: trajectory.append([state, action, reward, next_state])
+            
+            state = next_state
+        
+        if verbose:
+            return reward_tot, trajectory
+        else:
+            return reward_tot

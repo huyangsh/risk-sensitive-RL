@@ -3,25 +3,26 @@ import torch
 import pickle as pkl
 
 class TorchDataset:
-    def __init__(self, state_dim, action_dim, max_size, device):
+    def __init__(self, device):
+        self.device = device
+
+        # Internal state.
+        self.size = 0
+
+
+    # Core functions: data collection.
+    def start(self, state_dim, action_dim, max_size):
         # Parameters.
         self.state_dim  = state_dim
         self.action_dim = action_dim
         self.max_size   = max_size
 
-        self.device     = device
-
-        # Internal states.
-        self.size = 0
-
-
-    # Core functions: data collection.
-    def start(self):
-        self.state      = np.zeros((self.max_size, self.state_dim))
-        self.action     = np.zeros((self.max_size, self.action_dim))
-        self.next_state = np.zeros((self.max_size, self.state_dim))
-        self.reward     = np.zeros((self.max_size, 1))
-        self.not_done   = np.zeros((self.max_size, 1))
+        # Initialization.
+        self.state      = np.zeros((max_size, self.state_dim))
+        self.action     = np.zeros((max_size, self.action_dim))
+        self.next_state = np.zeros((max_size, self.state_dim))
+        self.reward     = np.zeros((max_size, 1))
+        self.not_done   = np.zeros((max_size, 1))
 
         self.ptr        = 0
         self.size       = 0
@@ -73,9 +74,9 @@ class TorchDataset:
         with open(filename, "rb") as f:
             data = pkl.load(f)
         
-        self.size = data["size"]
-        self.state = data["state"]
-        self.action = data["action"]
+        self.size       = data["size"]
+        self.state      = data["state"]
+        self.action     = data["action"]
         self.next_state = data["next_state"]
-        self.reward = data["reward"]
-        self.not_done = data["not_done"]
+        self.reward     = data["reward"]
+        self.not_done   = data["not_done"]

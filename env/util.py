@@ -1,7 +1,7 @@
 import numpy as np
 from . import RMDP
 
-def build_toy_env(p_perturb, beta, gamma):
+def build_toy_env(p_perturb, beta, gamma, thres=1e-5):
     num_states  = 14
     num_actions = 3    # 0 = left, 1 = stay, 2 = right.
 
@@ -18,4 +18,4 @@ def build_toy_env(p_perturb, beta, gamma):
 
     distr_init = np.ones(shape=(num_states,), dtype=np.float64) / num_states
 
-    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma)
+    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma, thres)

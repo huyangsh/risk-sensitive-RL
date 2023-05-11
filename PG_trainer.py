@@ -11,11 +11,15 @@ from env import RMDP, build_toy_env
 THRES = 1e-5
 T_EST = 100
 
+seed = 0
+random.seed(seed)
+np.random.seed(seed)
+
 # Build environment
 p_perturb = 0.15
 beta  = 0.01
 gamma = 0.95
-env = build_toy_env(p_perturb, beta, gamma)
+env = build_toy_env(p_perturb, beta, gamma, THRES)
 
 M   = 0.005
 eps = 1e-2

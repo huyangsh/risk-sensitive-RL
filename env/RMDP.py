@@ -2,15 +2,12 @@ import numpy as np
 import random
 from copy import deepcopy
 from math import exp, log
-import matplotlib.pyplot as plt
 
 from . import Env
 
-THRES = 1e-5
-EST_T = 100
 
 class RMDP(Env):
-    def __init__(self, num_states, num_actions, distr_init, reward, prob, beta, gamma):
+    def __init__(self, num_states, num_actions, distr_init, reward, prob, beta, gamma, thres=1e-5):
         assert distr_init.shape == (num_states,)
         assert reward.shape == (num_states, num_actions)
         assert prob.shape == (num_states, num_actions, num_states)
@@ -29,7 +26,10 @@ class RMDP(Env):
         self.gamma  = gamma
         self.coeff  = gamma / beta
 
-        self.V_opt     = self._DP_opt(thres=THRES)
+        self.thres  = thres
+
+        # Utility: precalculated optimal risk measure.
+        self.V_opt     = self._DP_opt(thres=self.thres)
         self.V_opt_avg = (self.V_opt*self.distr_init).sum()
 
 
@@ -43,23 +43,22 @@ class RMDP(Env):
         self.state = random.choices(self.states, weights=self.prob[self.state,action,:])[0]
         return self.state, reward
     
-    def eval(self, agent, T_eval, verbose=True):
-        reward_tot = 0
-        g_t = 1
-
+    def eval(self, agent, T_eval, verbose=False):
         state = self.reset()
+        reward_tot, g_t = 0, 1
         if verbose: trajectory = []
         for t in range(T_eval):
             action = agent.select_action(state)
             next_state, reward = self.step(action)
+
+            reward_tot += g_t * reward
+            g_t *= self.gamma
             if verbose: trajectory.append([state, action, reward, next_state])
 
             state = next_state
-            reward_tot += g_t * reward
-            g_t *= self.gamma
         
         if verbose:
-            return trajectory, reward_tot
+            return reward_tot, trajectory
         else:
             return reward_tot
 
@@ -125,7 +124,7 @@ class RMDP(Env):
 
     # Utility: calculate state-visit frequency.
     def _prob_hat(self, pi, V_pi):
-        if V_pi is None: V_pi = self.DP_pi(pi, thres=THRES)
+        if V_pi is None: V_pi = self.DP_pi(pi, thres=self.thres)
         V_pi = V_pi[np.newaxis, np.newaxis, :]
         
         prob_hat = self.prob * np.exp(-self.beta*V_pi)

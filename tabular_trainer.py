@@ -7,11 +7,17 @@ import matplotlib.pyplot as plt
 from env import RMDP, build_toy_env
 from agent import RFZI_Tabular
 
+THRES = 1e-5
+
+seed = 0
+random.seed(seed)
+np.random.seed(seed)
+
 # Build environment
 p_perturb = 0.15
 beta  = 0.01
 gamma = 0.95
-env = build_toy_env(p_perturb, beta, gamma)
+env = build_toy_env(p_perturb, beta, gamma, THRES)
 
 # Load data.
 dataset = np.load("./data/toy/toy_random_0.01.npy")
@@ -36,11 +42,11 @@ for t in range(T):
 
         reward_list = []
         for rep in range(n_eval):
-            _, reward_tot = env.eval(pi, T=T_eval)
+            reward_tot = env.eval(agent, T_eval=T_eval)
             reward_list.append(reward_tot)
         print("rewards", reward_list)
 
-        V_pi = env.DP_pi(pi, thres=1e-5)
+        V_pi = env.DP_pi(pi, thres=THRES)
         V_pi_avg = (V_pi*env.distr_init).sum()
         V_loss = env.V_opt_avg - V_pi_avg
         print(f"V-loss = {V_loss}")
