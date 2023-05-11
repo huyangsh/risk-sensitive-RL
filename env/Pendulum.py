@@ -95,8 +95,8 @@ class Pendulum(Env):
         self.dim_state = 3
         self.dim_action = 1
         self.num_actions = 100
-        self.actions = np.linspace(start=-self.max_torque, stop=self.max_torque, num=self.num_actions)
-
+        self.actions = [np.array([x]) for x in np.linspace(start=-self.max_torque, stop=self.max_torque, num=self.num_actions)]
+        
         self.gamma = 1
 
         # Internal state.
@@ -128,6 +128,8 @@ class Pendulum(Env):
     def reward(self, x, u):
         costh, sinth, thdot = x
         th = np.arccos(sinth) * np.sign(sinth)
+        
+        u = np.clip(u, -self.max_torque, self.max_torque)[0]
         costs = self._angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2)
         return -costs
 

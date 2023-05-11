@@ -9,7 +9,7 @@ class Env:
     def step(self, action):
         raise NotImplementedError
 
-    def eval(self, agent, T_eval, verbose=False):
+    def eval(self, policy, T_eval, verbose=False):
         state, done = self.reset(), False
         reward_tot, g_t, t = 0, 1, 0
         if verbose: trajectory = []
@@ -17,12 +17,12 @@ class Env:
             if t >= T_eval: break
             t += 1
 
-            action = agent.select_action(state)
+            action = policy(state)
             next_state, reward, done, _ = self.step(action)
 
             reward_tot += g_t * reward
             g_t *= self.gamma
-            if verbose: trajectory.append([state, action, reward, next_state])
+            if verbose: trajectory.append([state, action, reward, next_state, done])
 
             state = next_state
         

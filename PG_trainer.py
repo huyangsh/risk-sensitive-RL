@@ -52,6 +52,6 @@ test_reps = 10
 test_T = 1000
 reward_list = []
 for rep in range(test_reps):
-    reward_list.append( env.eval(pi, T=test_T) )
+    reward_list.append( env.eval(agent.select_action, T=test_T) )
 print(reward_list)
 print(np.array(reward_list, dtype=np.float64).mean())

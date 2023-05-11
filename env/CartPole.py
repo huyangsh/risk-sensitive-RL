@@ -91,7 +91,7 @@ class CartPole(Env):
         self.dim_state = 4
         self.dim_action = 1
         self.num_actions = 2
-        self.actions = [0, 1]
+        self.actions = [np.array([0]), np.array([1])]
 
         self.gamma = 1
 
@@ -105,6 +105,7 @@ class CartPole(Env):
         assert action in self.actions, err_msg
 
         x, x_dot, theta, theta_dot = self.state
+        action = action[0]
         force = self.force_mag if action == 1 else -self.force_mag
         costheta = math.cos(theta)
         sintheta = math.sin(theta)
@@ -183,6 +184,8 @@ class CartPole(Env):
 
     def reward(self, state, action):
         x, x_dot, theta, theta_dot = tuple(state)
+        action = action[0]
+        
         done = bool(
             x < -self.x_threshold
             or x > self.x_threshold

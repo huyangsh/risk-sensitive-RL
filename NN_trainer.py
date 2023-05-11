@@ -36,7 +36,6 @@ args = parser.parse_args()
 print(args)
 
 # Build environment.
-
 if args.env == "CartPole":
     env = CartPole()
     data_path = f"./data/CartPole/CartPole_PPO_0.3.pkl"
@@ -65,7 +64,7 @@ for t in range(T):
         with torch.no_grad():
             rewards = []
             for t in range(args.eval_episodes):
-                reward = env.eval(agent, T_eval=1000)
+                reward = env.eval(agent.select_action, T_eval=1000)
                 rewards.append(reward)
 
             avg, std = np.average(rewards), np.std(rewards)

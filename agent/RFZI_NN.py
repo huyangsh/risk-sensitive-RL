@@ -41,8 +41,8 @@ class RFZI_NN(Agent):
         self.dim_state      = env.dim_state
         self.dim_action     = env.dim_action
         self.num_actions    = env.num_actions
-        self.action_ids     = list(range(self.num_actions))
         self.actions        = env.actions
+        self.actions_tensor = torch.FloatTensor(np.array(self.actions))
 
         self.reward         = env.reward
         self.beta           = beta
@@ -72,19 +72,19 @@ class RFZI_NN(Agent):
         self.z_func_target = copy.deepcopy(self.z_func_current)
 
     def update(self, dataset, num_batches, batch_size):
-        test_actions = torch.FloatTensor(self.action_ids).repeat(batch_size)[:, None]
+        test_actions = self.actions_tensor.repeat((batch_size, 1))
 
         loss_list = []
         for b in range(num_batches):
             # Sample a batch from dataset.
-            states, actions, next_states, _, _ = dataset.sample(batch_size)
+            states, actions, _, next_states, _ = dataset.sample(batch_size)
 
             # Get rewards.
             next_rewards = np.zeros(shape=(batch_size, self.num_actions), dtype=np.float32)
             for i in range(batch_size):
                 s_ = next_states[i]
                 for j in range(self.num_actions):
-                    a_ = self.action_ids[j]
+                    a_ = self.actions[j]
                     next_rewards[i, j] = self.reward(s_, a_)
             next_rewards = torch.FloatTensor(next_rewards).flatten().to(self.device)
             
@@ -114,13 +114,12 @@ class RFZI_NN(Agent):
     
     def select_action(self, state):
         with torch.no_grad():
-            state_tensor = torch.FloatTensor(state).repeat(repeats=(self.num_actions, 1)).to(self.device)
-            actions_tensor = torch.FloatTensor(self.action_ids)[:, None]
+            rewards = np.array([self.reward(state, a) for a in self.actions], dtype=np.float32)
 
-            rewards = np.array([self.reward(state, a) for a in self.action_ids], dtype=np.float32)
-            rewards = rewards - 1/self.beta * self.z_func_target(state_tensor, actions_tensor).cpu().detach().flatten().numpy()
+            state_tensor = torch.FloatTensor(state).repeat(repeats=(self.num_actions, 1)).to(self.device)
+            rewards = rewards - 1/self.beta * self.z_func_target(state_tensor, self.actions_tensor).cpu().detach().flatten().numpy()
         
-        return rewards.argmax()
+        return self.actions[rewards.argmax()]
 
     def load(self, filename):
         self.z_func_current.load(filename)
