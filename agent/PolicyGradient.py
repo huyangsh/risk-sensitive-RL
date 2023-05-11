@@ -1,27 +1,65 @@
 import numpy as np
 import random
-from copy import deepcopy
-from math import exp, log
 
-from agent.Agent import Agent
+from . import Agent
 
-THRES = 1e-5
-EST_T = 100
 
 class PolicyGradientAgent(Agent):
-    def __init__(self, env, eta):
-        self.eta = eta
-        self.env = env
+    def __init__(self, env, eta, T_est, thres):
+        # Environment information.
+        self.env            = env
         
-        self.num_states = env.num_states
-        self.num_actions = env.num_actions
-        self.states = env.states
-        self.actions = env.actions
+        self.num_states     = env.num_states
+        self.num_actions    = env.num_actions
+        self.states         = env.states
+        self.actions        = env.actions
 
-        self.reward = env.reward
-        self.beta = env.beta
-        self.gamma = env.gamma
+        self.reward         = env.reward
+        self.beta           = env.beta
+        self.gamma          = env.gamma
 
+        # Learning parameters.
+        self.eta    = eta
+        self.T_est  = T_est
+        self.thres  = thres
+
+        # Internal state.
+        self.pi = None
+    
+
+    # Core functions.
+    def reset(self, pi_init):
+        assert pi_init.shape == (self.num_states, self.num_actions)
+        self.pi = pi_init
+        
+        return self.pi
+    
+    def update(self):
+        V_pi = self.env.DP_pi(self.pi, thres=self.thres)
+        Q_pi = self.env.V_to_Q(V_pi)
+        loss = self.env.V_opt_avg - (V_pi*self.env.distr_init).sum()
+
+        d_pi = self.env.visit_freq(self.pi, T=self.T_est, V_pi=V_pi)[:, np.newaxis]
+        grad = Q_pi * d_pi / (1-self.env.gamma)
+        assert grad.shape == (self.num_states, self.num_actions)
+        
+        self.pi = self.pi + self.eta * grad
+        for s in self.env.states:
+            self.pi[s, :] = self._project(self.pi[s, :])
+        
+        return self.pi, {"loss": loss, "V_pi": V_pi, "Q_pi": Q_pi}
+
+    def select_action(self, state):
+        return random.choices(self.actions, weights=self.pi[state,:])[0]
+    
+    def save(self, filename):
+        np.save(filename, self.pi)
+    
+    def load(self, filename):
+        self.pi = np.load(filename)
+    
+
+    # Utility: projection onto the probability simplex.
     def _l2_project(self, r, a, b):
         # Implements l2-projection onto the simplex:
         #   min_y  ||r-x||^2
@@ -42,24 +80,3 @@ class PolicyGradientAgent(Agent):
     def _project(self, x):
         assert x.shape == (self.env.num_actions,)
         return self._l2_project(x, np.zeros_like(x), np.ones_like(x))
-    
-    def reset(self, pi_init):
-        assert pi_init.shape == (self.num_states, self.num_actions)
-        self.pi = pi_init
-        
-        return self.pi
-    
-    def update(self):
-        V_pi = self.env.DP_pi(self.pi, thres=THRES)
-        Q_pi = self.env.V_to_Q(V_pi)
-        loss = self.env.V_opt_avg - (V_pi*self.env.distr_init).sum()
-
-        d_pi = self.env.visit_freq(self.pi, T=EST_T, V_pi=V_pi)[:, np.newaxis]
-        grad = Q_pi * d_pi / (1-self.env.gamma)
-        assert grad.shape == (self.num_states, self.num_actions)
-        
-        self.pi = self.pi + self.eta * grad
-        for s in self.env.states:
-            self.pi[s, :] = self._project(self.pi[s, :])
-        
-        return self.pi, {"loss": loss, "V_pi": V_pi, "Q_pi": Q_pi}

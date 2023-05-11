@@ -1,3 +1,5 @@
+from .Agent import Agent
+
 from .PolicyGradient import PolicyGradientAgent
 
 from .RFZI_NN import RFZI_NN

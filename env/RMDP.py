@@ -4,10 +4,12 @@ from copy import deepcopy
 from math import exp, log
 import matplotlib.pyplot as plt
 
+from . import Env
+
 THRES = 1e-5
 EST_T = 100
 
-class RMDP:
+class RMDP(Env):
     def __init__(self, num_states, num_actions, distr_init, reward, prob, beta, gamma):
         assert distr_init.shape == (num_states,)
         assert reward.shape == (num_states, num_actions)
@@ -41,15 +43,14 @@ class RMDP:
         self.state = random.choices(self.states, weights=self.prob[self.state,action,:])[0]
         return self.state, reward
     
-    def eval(self, pi, T, verbose=True):
-        assert pi.shape == (self.num_states, self.num_actions)
+    def eval(self, agent, T_eval, verbose=True):
         reward_tot = 0
         g_t = 1
 
         state = self.reset()
         if verbose: trajectory = []
-        for t in range(T):
-            action = random.choices(self.actions, weights=pi[state,:])[0]
+        for t in range(T_eval):
+            action = agent.select_action(state)
             next_state, reward = self.step(action)
             if verbose: trajectory.append([state, action, reward, next_state])
 

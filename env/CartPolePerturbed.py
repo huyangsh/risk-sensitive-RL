@@ -85,6 +85,9 @@ class CartPolePerturbed(gym.Env):
             dtype=np.float32,
         )
 
+        self.dim_state = 4
+        self.dim_action = 1
+        self.num_actions = 2
         self.action_space = spaces.Discrete(2)
 
         self.seed()
@@ -192,10 +195,10 @@ class CartPolePerturbed(gym.Env):
         
         return reward
     
-    def eval(self, agent, T, verbose=True):
+    def eval(self, agent, T_eval, verbose=True):
         rewards = []
 
-        for _ in range(T):
+        for t in range(T_eval):
             state, done = self.reset(), False  # seed=np.random.randint(100000)
             eps_reward = 0.0
             while not done:
@@ -205,7 +208,7 @@ class CartPolePerturbed(gym.Env):
             rewards.append(eps_reward)
         avg, std = np.average(rewards), np.std(rewards)
         print("---------------------------------------")
-        print(f"Evaluation over {T} episodes")
+        print(f"Evaluation over {T_eval} episodes")
         print(rewards)
         print("---------------------------------------")
         return avg, std

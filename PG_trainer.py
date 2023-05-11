@@ -5,39 +5,24 @@ from math import exp, log
 import matplotlib.pyplot as plt
 
 from agent import PolicyGradientAgent
-from env import RMDP
+from env import RMDP, build_toy_env
 
 
 THRES = 1e-5
+T_EST = 100
 
-# Build environment.
-num_states  = 14
-num_actions = 3    # 0 = left, 1 = stay, 2 = right.
-
+# Build environment
 p_perturb = 0.15
-reward_src = np.array([0,-10,5,-10,0,1,1,0, 0,0,-1,2,-1,0])
-reward = np.zeros(shape=(num_states,num_actions), dtype=np.float64)
-prob = np.zeros(shape=(num_states,num_actions,num_states), dtype=np.float64)
-for s in range(num_states):
-    for a in range(num_actions):
-        reward[s,a] = reward_src[s]
-        
-        prob[s,a,(s+a-1)%num_states] = 1 - 2*p_perturb
-        prob[s,a,(s+a-2)%num_states] = p_perturb
-        prob[s,a,(s+a)%num_states]   = p_perturb
-
-distr_init = np.ones(shape=(num_states,), dtype=np.float64) / num_states
-
 beta  = 0.01
 gamma = 0.95
-env = RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma)
+env = build_toy_env(p_perturb, beta, gamma)
 
 M   = 0.005
 eps = 1e-2
-eta = (1-gamma)**3 / (2*num_actions*M)
-T   = int(16*num_actions*M**4 / (((1-gamma)**4) * (eps**2))) * 100
+eta = (1-gamma)**3 / (2*env.num_actions*M)
+T   = int(16*env.num_actions*M**4 / (((1-gamma)**4) * (eps**2))) * 100
 
-agent = PolicyGradientAgent(env, eta)
+agent = PolicyGradientAgent(env, eta, T_EST, THRES)
 
 pi_init = np.ones(shape=(env.num_states, env.num_actions), dtype=np.float64) / env.num_actions
 agent.reset(pi_init)
