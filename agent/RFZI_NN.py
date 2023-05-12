@@ -42,9 +42,15 @@ class RFZI_NN(Agent):
         self.dim_action     = env.dim_action
         self.num_actions    = env.num_actions
         self.actions        = env.actions
-        self.actions_tensor = torch.FloatTensor(np.array(self.actions))
 
-        self.reward         = env.reward
+        self.actions_tensor = torch.FloatTensor(np.array(self.actions))
+        if len(self.actions_tensor.shape) == 1: self.actions_tensor = self.actions_tensor[:, None]
+        self.actions_tensor = self.actions_tensor.to(device)
+
+        if type(env.reward) == np.ndarray:
+            self.reward     = lambda s,a: env.reward[int(s),int(a)]
+        else:
+            self.reward         = env.reward
         self.beta           = beta
         self.gamma          = gamma
         
@@ -80,9 +86,10 @@ class RFZI_NN(Agent):
             states, actions, _, next_states, _ = dataset.sample(batch_size)
 
             # Get rewards.
+            next_states_np = next_states.cpu().numpy()
             next_rewards = np.zeros(shape=(batch_size, self.num_actions), dtype=np.float32)
             for i in range(batch_size):
-                s_ = next_states[i]
+                s_ = next_states_np[i][0]
                 for j in range(self.num_actions):
                     a_ = self.actions[j]
                     next_rewards[i, j] = self.reward(s_, a_)
@@ -116,6 +123,7 @@ class RFZI_NN(Agent):
         with torch.no_grad():
             rewards = np.array([self.reward(state, a) for a in self.actions], dtype=np.float32)
 
+            if type(state) in (int, float, np.int64): state = [state]
             state_tensor = torch.FloatTensor(state).repeat(repeats=(self.num_actions, 1)).to(self.device)
             rewards = rewards - 1/self.beta * self.z_func_target(state_tensor, self.actions_tensor).cpu().detach().flatten().numpy()
         

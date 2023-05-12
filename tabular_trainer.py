@@ -20,7 +20,7 @@ gamma = 0.95
 env = build_toy_env(p_perturb, beta, gamma, THRES)
 
 # Load data.
-dataset = np.load("./data/Toy/toy_random_0.01.npy")
+dataset = np.load("./data/Toy/toy_random.npy")
 
 # Build agent.
 agent = RFZI_Tabular(env)

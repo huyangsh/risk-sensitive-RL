@@ -127,7 +127,7 @@ class Pendulum(Env):
     
     def reward(self, x, u):
         costh, sinth, thdot = x
-        th = np.arccos(sinth) * np.sign(sinth)
+        th = np.arccos(costh) * np.sign(sinth)
         
         u = np.clip(u, -self.max_torque, self.max_torque)[0]
         costs = self._angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2)

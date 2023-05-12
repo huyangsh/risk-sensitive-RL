@@ -19,6 +19,9 @@ class RMDP(Env):
         self.actions     = np.arange(self.num_actions)
         self.distr_init  = distr_init
 
+        self.dim_state   = 1
+        self.dim_action  = 1
+
         self.reward = reward
         self.prob   = prob
 
