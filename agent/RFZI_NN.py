@@ -37,7 +37,10 @@ class Z_Func(nn.Module):
         # z = F.relu(self.l1(torch.cat([state, action], 1)))
         z = F.relu(self.l1(self._state_embedding(state, action)))
         z = F.relu(self.l2(z))
-        z = F.sigmoid(self.l3(z))
+        # z = F.sigmoid(self.l3(z))
+        z_ = self.l3(z)
+        z = torch.sigmoid(self.l3(z))
+
         return z
     
     def save(self, path):
@@ -119,9 +122,9 @@ class RFZI_NN(Agent):
                 next_states = torch.repeat_interleave(next_states, self.num_actions, dim=0)
                 
                 target_Z = self.z_func_target(next_states, test_actions).flatten()
-                target_Z = self.beta*next_rewards - self.gamma*torch.log(target_Z)
+                target_Z = self.beta*next_rewards - torch.log(target_Z)
                 target_Z = target_Z.reshape(shape=(batch_size, self.num_actions)).amax(dim=1)
-                target_Z = torch.exp(-target_Z)
+                target_Z = torch.exp(-self.gamma*target_Z)
 
             current_Z = self.z_func_current(states, actions).flatten()
             z_func_loss = F.mse_loss(current_Z, target_Z)
