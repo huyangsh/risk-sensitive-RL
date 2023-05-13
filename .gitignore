@@ -4,4 +4,5 @@ __pycache__/
 
 # Log files.
 /log/
-NN_trainer.py
+log.0
+log.1
