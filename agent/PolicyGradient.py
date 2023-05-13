@@ -52,11 +52,11 @@ class PolicyGradientAgent(Agent):
     def select_action(self, state):
         return random.choices(self.actions, weights=self.pi[state,:])[0]
     
-    def save(self, filename):
-        np.save(filename, self.pi)
+    def save(self, path):
+        np.save(path, self.pi)
     
-    def load(self, filename):
-        self.pi = np.load(filename)
+    def load(self, path):
+        self.pi = np.load(path)
     
 
     # Utility: projection onto the probability simplex.

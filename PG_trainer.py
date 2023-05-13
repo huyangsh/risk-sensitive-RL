@@ -5,7 +5,7 @@ from math import exp, log
 import matplotlib.pyplot as plt
 
 from agent import PolicyGradientAgent
-from env import RMDP, build_toy_env
+from env import RMDP, build_small_toy_env, build_large_toy_env
 
 
 THRES = 1e-5
@@ -19,7 +19,7 @@ np.random.seed(seed)
 p_perturb = 0.15
 beta  = 0.01
 gamma = 0.95
-env = build_toy_env(p_perturb, beta, gamma, THRES)
+env = build_large_toy_env(p_perturb, beta, gamma, THRES)
 
 M   = 0.005
 eps = 1e-2
@@ -39,8 +39,8 @@ for t in range(T):
     print(t)
     print("V_pi", info["V_pi"])
     print("Q_pi", info["Q_pi"])
-    print("loss", info["loss"])
     print("pi", pi)
+    print("loss", info["loss"])
 
 V_pi = env.DP_pi(pi, THRES)
 loss_list.append( env.V_opt_avg - (V_pi*env.distr_init).sum() )

@@ -39,7 +39,7 @@ class RFZI_Tabular(Agent):
         # Calculate Z_next.
         Z_next = np.zeros_like(self.Z)
         cnt = np.zeros_like(self.Z)
-        for s,a,r,s_ in dataset:
+        for s,a,r,s_,_ in dataset:
             s, a, s_ = int(s), int(a), int(s_)
             Z_next[s,a] += next_rewards[s_]
             cnt[s,a] += 1
@@ -51,7 +51,7 @@ class RFZI_Tabular(Agent):
         if verbose:
             # Training loss.
             loss = 0
-            for s,a,r,s_ in dataset:
+            for s,a,r,s_,_ in dataset:
                 s, a, s_ = int(s), int(a), int(s_)
                 loss += (Z_next[s,a] - next_rewards[s_]) ** 2
             loss /= num_data
@@ -69,12 +69,12 @@ class RFZI_Tabular(Agent):
         if self.pi is None: self.get_policy()
         return random.choices(self.actions, weights=self.pi[state,:])[0]
     
-    def save(self, filename):
-        with open(filename, "wb") as f:
+    def save(self, path):
+        with open(path, "wb") as f:
             pkl.dump({"pi": self.pi, "Z":self.Z}, f)
     
-    def load(self, filename):
-        with open(filename, "rb") as f:
+    def load(self, path):
+        with open(path, "rb") as f:
             data = pkl.load(f)
         self.pi = data["pi"]
         self.Z = data["Z"]
