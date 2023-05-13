@@ -13,22 +13,24 @@ class Z_Func(nn.Module):
     def __init__(self, dim_state, dim_action):
         super(Z_Func, self).__init__()
         # Warning: use sin-cos representation!
-        # self.l1 = nn.Linear(dim_state + dim_action, 32)
-        self.l1 = nn.Linear(16*dim_state + dim_action, 32)
-        self.l2 = nn.Linear(32, 8)
-        self.l3 = nn.Linear(8, 1)
+        # self.l1 = nn.Linear(dim_state + dim_action, 256*dim_state)
+        # self.l1 = nn.Linear(16*dim_state + dim_action, 256*dim_state)  # (128/32, 16) works for the small toy model.
+        self.l1 = nn.Linear(dim_state+2 + dim_action, 256*dim_state)
+        self.l2 = nn.Linear(256*dim_state, 32)
+        self.l3 = nn.Linear(32, 1)
     
     def _state_embedding(self, state, action):
         # return torch.cat([state, action], 1)
+        # return torch.cat([state, torch.sin(state[:,2][:,None]), torch.cos(state[:,2][:,None]), action], 1)
         return torch.cat([
-            torch.sin(state), torch.cos(state),
-            torch.sin(2*state), torch.cos(2*state),
-            torch.sin(3*state), torch.cos(3*state),
-            torch.sin(4*state), torch.cos(4*state),
-            torch.sin(5*state), torch.cos(5*state),
-            torch.sin(6*state), torch.cos(6*state),
-            torch.sin(7*state), torch.cos(7*state),
-            torch.sin(8*state), torch.cos(8*state),
+            torch.sin(state/100), torch.cos(state/100),
+            torch.sin(2*state/100), torch.cos(2*state/100),
+            torch.sin(3*state/100), torch.cos(3*state/100),
+            torch.sin(4*state/100), torch.cos(4*state/100),
+            torch.sin(5*state/100), torch.cos(5*state/100),
+            torch.sin(6*state/100), torch.cos(6*state/100),
+            torch.sin(7*state/100), torch.cos(7*state/100),
+            torch.sin(8*state/100), torch.cos(8*state/100),
             action
         ], 1)
 
@@ -37,10 +39,7 @@ class Z_Func(nn.Module):
         # z = F.relu(self.l1(torch.cat([state, action], 1)))
         z = F.relu(self.l1(self._state_embedding(state, action)))
         z = F.relu(self.l2(z))
-        # z = F.sigmoid(self.l3(z))
-        z_ = self.l3(z)
-        z = torch.sigmoid(self.l3(z))
-
+        z = F.sigmoid(self.l3(z))
         return z
     
     def save(self, path):
@@ -69,7 +68,7 @@ class RFZI_NN(Agent):
         self.actions_tensor = self.actions_tensor.to(device)
 
         if type(env.reward) == np.ndarray:
-            self.reward     = lambda s,a: env.reward[int(s),int(a)]
+            self.reward     = lambda s,a: env.reward[int(s[0]),int(a)]
         else:
             self.reward     = env.reward
         
@@ -111,7 +110,7 @@ class RFZI_NN(Agent):
             next_states_np = next_states.cpu().numpy()
             next_rewards = np.zeros(shape=(batch_size, self.num_actions), dtype=np.float32)
             for i in range(batch_size):
-                s_ = next_states_np[i]  # Warning: the tabular case needs [0]! Try to solve this.
+                s_ = next_states_np[i]
                 for j in range(self.num_actions):
                     a_ = self.actions[j]
                     next_rewards[i, j] = self.reward(s_, a_)
@@ -143,9 +142,9 @@ class RFZI_NN(Agent):
     
     def select_action(self, state):
         with torch.no_grad():
-            rewards = np.array([self.reward(state, a) for a in self.actions], dtype=np.float32)
-
             if type(state) in (int, np.int32, np.int64): state = [state]
+
+            rewards = np.array([self.reward(state, a) for a in self.actions], dtype=np.float32)
             state_tensor = torch.FloatTensor(state).repeat(repeats=(self.num_actions, 1)).to(self.device)
             rewards = rewards - 1/self.beta * np.log(self.z_func_target(state_tensor, self.actions_tensor).cpu().detach().flatten().numpy())
         

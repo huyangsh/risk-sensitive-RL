@@ -35,7 +35,7 @@ for t in range(T):
     _, info = agent.update(dataset.data)
     print(f"loss at {t}: {info['loss']:.6f}, diff = {np.linalg.norm(info['diff']):.6f}.")
     
-    if (t % 1 == 0):
+    if (t % 20 == 0):
         print(f"eval at {t}")
         pi = agent.get_policy()
         print("pi", pi)

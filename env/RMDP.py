@@ -39,12 +39,12 @@ class RMDP(Env):
     # Environment functions (compatible with OpenAI gym).
     def reset(self):
         self.state = random.choices(self.states, weights=self.distr_init)[0]
-        return self.state
+        return np.array([self.state], dtype=np.float32)
     
     def step(self, action):
         reward = self.reward[self.state, action]
         self.state = random.choices(self.states, weights=self.prob[self.state,action,:])[0]
-        return self.state, reward, False, None    # Compatible with the OpenAI gym interface: done = False (non-episodic).
+        return np.array([self.state], dtype=np.float32), reward, False, None    # Compatible with the OpenAI gym interface: done = False (non-episodic).
 
 
     # Utility: Bellman updates (using DP). 

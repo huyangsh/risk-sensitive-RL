@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data_eps', default=0.3, type=float)
 # policy used to generate data
 parser.add_argument('--gendata_pol', default='ppo', type=str)  
-parser.add_argument('--env', default='toy', type=str)
+parser.add_argument('--env', default='CartPole', type=str)
 parser.add_argument('--max_trn_steps', default=int(5e5), type=float)
 parser.add_argument('--eval_freq', default=10, type=float)
 parser.add_argument('--eval_episodes', default=10, type=int)
@@ -27,8 +27,8 @@ parser.add_argument('--data_size', default=int(1e6), type=int)
 parser.add_argument('--batch_size', default=int(1e4), type=int)
 
 # critic lr*
-parser.add_argument('--z_func_lr', default=1, type=float)
-parser.add_argument('--gamma', default=0.99, type=float)
+parser.add_argument('--z_func_lr', default=0.5, type=float)
+parser.add_argument('--gamma', default=0.95, type=float)
 parser.add_argument('--beta', default=0.01, type=float)
 parser.add_argument('--tau', default=0.1, type=float)               
 
@@ -41,16 +41,20 @@ print(device)
 # Build environment.
 if args.env == "CartPole":
     env = CartPole()
-    data_path = f"./data/CartPole/CartPole_PPO_0.3.pkl"
+    data_path = f"./data/CartPole/CartPole_random.pkl"
 elif args.env == "Pendulum":
     env = Pendulum()
     data_path = f"./data/Pendulum/Pendulum_SAC_0.3.pkl"
-elif args.env == "toy":
+elif args.env == "toy_small":
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
-    # env = build_small_toy_env(p_perturb, beta, gamma)
-    # data_path = f"./data/Toy/toy_torch_random.pkl"
+    env = build_small_toy_env(p_perturb, beta, gamma)
+    data_path = f"./data/Toy/toy_small_torch_random.pkl"
+elif args.env == "toy_large":
+    p_perturb = 0.15
+    beta  = 0.01
+    gamma = 0.95
     env = build_large_toy_env(p_perturb, beta, gamma)
     data_path = f"./data/Toy/toy_large_torch_random.pkl"
 else:
@@ -64,18 +68,18 @@ data.load(data_path)
 agent = RFZI_NN(env, device,
                 z_func_lr=args.z_func_lr,
                 gamma=args.gamma, beta=args.beta, tau=args.tau)
-if args.env == "toy":
+if args.env.startswith("toy"):
     opt_val = sum(agent.env.V_opt * agent.env.distr_init)
     print(opt_val)
     
 # train RFZI
 T = 2000
 for t in range(T):
-    info = agent.update(data, num_batches=20, batch_size=int(1e4))  # args.batch_size)
+    info = agent.update(data, num_batches=20, batch_size=args.batch_size)
     print(f"loss {t} = {info['loss']}")
 
     if t % 10 == 0:
-        if args.env == "toy":
+        if args.env.startswith("toy"):
             agent_actions = []
             for state in env.states:
                 agent_actions.append(agent.select_action(state))
@@ -91,7 +95,7 @@ for t in range(T):
             print("---------------------------------------")
             print(f"Evaluation over {args.eval_episodes} episodes")
             print(rewards)
-            if args.env == "toy":
+            if args.env.startswith("toy"):
                 val = agent.calc_policy_reward()
                 print('Average Reward:', val)
             print("---------------------------------------")

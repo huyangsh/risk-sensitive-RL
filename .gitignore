@@ -4,5 +4,3 @@ __pycache__/
 
 # Log files.
 /log/
-log.0
-log.1
