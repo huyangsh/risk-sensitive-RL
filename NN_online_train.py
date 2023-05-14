@@ -1,5 +1,6 @@
 import argparse
 import signal
+from copy import deepcopy
 from tqdm import tqdm
 from datetime import datetime
 import pickle as pkl
@@ -8,7 +9,7 @@ import numpy as np
 import torch
 import random
 
-from data import TorchDataset
+from data import TorchBuffer
 from env import CartPole, Pendulum
 from env import build_toy_10_env, build_toy_100_env, build_toy_1000_env
 from env import reward_src_10, reward_src_100, reward_src_1000
@@ -29,14 +30,16 @@ parser.add_argument("--p_perturb", default=0.15, type=float)
 parser.add_argument("--sigma", default=0.0, type=float)
 parser.add_argument("--num_actions", default=5, type=int)
 
-parser.add_argument("--num_train", default=2000, type=int)
-parser.add_argument("--num_batches", default=20, type=int)
+parser.add_argument("--T_train", default=100000, type=int)
 parser.add_argument("--batch_size", default=10000, type=int)
 parser.add_argument("--lr", default=0.5, type=float)
 parser.add_argument("--tau", default=0.1, type=float)
 parser.add_argument("--dim_emb", default=100, type=int)
 
-parser.add_argument("--freq_eval", default=10, type=int)
+parser.add_argument("--buffer_size", default=1000000, type=int)
+parser.add_argument("--off_ratio", default=0.1, type=float)
+
+parser.add_argument("--freq_eval", default=1000, type=int)
 parser.add_argument("--num_eval", default=10, type=int)
 parser.add_argument("--T_eval", default=1000, type=int)
 parser.add_argument("--thres_eval", default=1e-5, type=float)
@@ -53,12 +56,13 @@ args = parser.parse_args()
 # Logging configuration.
 log_prefix  = f"./log/active/{args.env}_"
 log_prefix += f"{args.p_perturb}_" if args.env.startswith("Toy") else f"{args.sigma}_"
-log_prefix += f"{args.num_train}_{args.num_batches}_{args.batch_size}_{args.lr}_{args.tau}_" + datetime.now().strftime("%Y%m%d_%H%M%S")
-logger = Logger(prefix=log_prefix, use_tqdm=True)
+log_prefix += f"{args.T_train}_{args.batch_size}_{args.lr}_{args.tau}_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+logger = Logger(prefix=log_prefix, use_tqdm=True, flush_freq=100)
 
 msg  = "="*40 + " Settings " + "="*40 + "\n"
 msg += f"agent = RFZI_NN, env = {args.env}, beta = {args.beta:.4f}, gamma = {args.gamma:.4f},\n"
-msg += f"num_train = {args.num_train}, num_batches = {args.num_batches}, batch_size = {args.batch_size}, lr = {args.lr:.4f}, tau = {args.tau:.4f}, dim_emb = {args.dim_emb},\n"
+msg += f"T_train = {args.T_train}, batch_size = {args.batch_size}, lr = {args.lr:.4f}, tau = {args.tau:.4f}, dim_emb = {args.dim_emb},\n"
+msg += f"buffer_size = {args.buffer_size}, offline_data_ratio = {args.off_ratio:.4f},\n"
 msg += f"freq_eval = {args.freq_eval}, num_eval = {args.num_eval}, T_eval = {args.T_eval}, thres_eval = {args.thres_eval:.4f},\n"
 msg += f"disp_loss = {args.disp_loss}, disp_V_opt = {args.disp_V_opt}, disp_V_pi = {args.disp_V_pi}, disp_policy = {args.disp_policy}, eval = {args.eval}.\n"
 msg += "=" * 90 + "\n"
@@ -87,75 +91,75 @@ logger.log(f"> Using Pytorch on device {device} ({args.device} requested).")
 # Build environment and load data.
 data_path, is_tabular = args.data_path, False
 if args.env == "CartPole":
-    env = CartPole(sigma=args.sigma)
+    env_train = CartPole(sigma=args.sigma)
     if args.data_path is None: data_path = f"./data/CartPole/CartPole_random.pkl"
     
     def emb_func(state):
         return torch.cat([state, torch.sin(state[:,2][:,None]), torch.cos(state[:,2][:,None])], 1)
-    dim_emb = env.dim_state + 2
-    assert dim_emb == len(emb_func(torch.zeros(size=(1,env.dim_state))).flatten())
+    dim_emb = env_train.dim_state + 2
+    assert dim_emb == len(emb_func(torch.zeros(size=(1,env_train.dim_state))).flatten())
 
     logger.log(f"> Setting up CartPole with Gausian noise (sigma = {args.sigma:.4f}).")
     logger.log(f"  + Using data from path <{data_path}>.")
 elif args.env == "Pendulum":
-    env = Pendulum(num_actions=args.num_actions, sigma=args.sigma)
+    env_train = Pendulum(num_actions=args.num_actions, sigma=args.sigma)
     if args.data_path is None: data_path = f"./data/Pendulum/Pendulum_random.pkl"
     
     def emb_func(state):
         return state
-    dim_emb = env.dim_state 
-    assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
+    dim_emb = env_train.dim_state 
+    assert dim_emb == len(emb_func(torch.zeros(size=(env_train.dim_state,))).flatten())
 
     logger.log(f"> Setting up Pendulum with Gausian noise (sigma = {args.sigma:.4f}).")
-    logger.log(f"  + Action space contains {args.num_actions} actions: {env.actions}")
+    logger.log(f"  + Action space contains {args.num_actions} actions: {env_train.actions}")
     logger.log(f"  + Using data from path <{data_path}>.")
 elif args.env == "Toy-10":
     is_tabular = True
-    env = build_toy_10_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
+    env_train = build_toy_10_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
     if args.data_path is None: data_path = f"./data/Toy/Toy-10_torch_random.pkl"
 
-    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
+    mat = torch.FloatTensor(np.arange(env_train.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env.num_states)
+    mat = mat * (2*torch.pi/env_train.num_states)
     embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
-    assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
+    assert dim_emb == len(emb_func(torch.zeros(size=(env_train.dim_state,))).flatten())
 
     logger.log(f"> Setting up Toy-10 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
     logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_10)}>.")
     logger.log(f"  + Using data from path <{data_path}>.")
 elif args.env == "Toy-100":
     is_tabular = True
-    env = build_toy_100_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
+    env_train = build_toy_100_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
     if args.data_path is None: data_path = f"./data/Toy/Toy-100_torch_random.pkl"
 
-    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
+    mat = torch.FloatTensor(np.arange(env_train.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env.num_states)
+    mat = mat * (2*torch.pi/env_train.num_states)
     embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
-    assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
+    assert dim_emb == len(emb_func(torch.zeros(size=(env_train.dim_state,))).flatten())
 
     logger.log(f"> Setting up Toy-100 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
     logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_100)}>.")
     logger.log(f"  + Using data from path <{data_path}>.")
 elif args.env == "Toy-1000":
     is_tabular = True
-    env = build_toy_1000_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
+    env_train = build_toy_1000_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
     if args.data_path is None: data_path = f"./data/Toy/Toy-1000_torch_random.pkl"
 
-    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
+    mat = torch.FloatTensor(np.arange(env_train.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env.num_states)
+    mat = mat * (2*torch.pi/env_train.num_states)
     embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
-    assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
+    assert dim_emb == len(emb_func(torch.zeros(size=(env_train.dim_state,))).flatten())
     
     logger.log(f"> Setting up Toy-1000 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
     logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_1000)}>.")
@@ -163,54 +167,64 @@ elif args.env == "Toy-1000":
 else:
     raise NotImplementedError
 
-dataset = TorchDataset(device)
-dataset.load(data_path)
+env_eval = deepcopy(env_train)
+buffer = TorchBuffer(device, env_train.dim_state, env_train.dim_action, args.buffer_size, args.off_ratio)
+buffer.load(data_path, shuffle=False)
 logger.log(f"  + Data successfully loaded.")
 
 # Display optimal value (only valid for tabular case).
 if is_tabular and args.disp_V_opt:
-    opt_val = (env.V_opt*env.distr_init).sum()
+    opt_val = (env_train.V_opt*env_train.distr_init).sum()
     msg  = "> Optimal policy calculated for the tabular environment:\n"
-    msg += f"  + V_opt = {print_float_list(env.V_opt)}.\n"
+    msg += f"  + V_opt = {print_float_list(env_train.V_opt)}.\n"
     msg += f"  + E[V_opt] = {opt_val:.6f}.\n"
-    msg += f"  + pi_opt = {env.V_to_Q(env.V_opt).argmax(axis=1).flatten().tolist()}."
+    msg += f"  + pi_opt = {env_train.V_to_Q(env_train.V_opt).argmax(axis=1).flatten().tolist()}."
     logger.log(msg)
 
 # Train RFZI agent.
 agent = RFZI_NN(
-    env=env, device=device,
+    env=env_train, device=device,
     beta=args.beta, gamma=args.gamma, 
     lr=args.lr, tau=args.tau,
     emb_func=emb_func, dim_emb=dim_emb,
-    dim_hidden=(256*env.dim_state, 32)
+    dim_hidden=(256*env_train.dim_state, 32)
 )
 logger.log(f"> Setting up agent: beta = {args.beta}, gamma = {args.gamma}, lr = {args.lr}, tau = {args.tau}.\n\n")
 
 try:
-    for t in tqdm(range(args.num_train)):
+    state, done = env_train.reset(), False
+    for t in tqdm(range(args.T_train)):
+        # Take one step and collect data.
+        action = agent.select_action(state)
+        next_state, reward, done, _ = env_train.step(action)
+        buffer.add(state, action, reward, next_state, done)
+        logger.log(f"step {t}: {state}, {action}, {reward}, {next_state}, {done}.")
+        
+        state = next_state
+        if done:  # Restart at the end of episode.
+            state, done = env_train.reset(), False
+
         # Update agent.
-        info = agent.update(dataset, num_batches=args.num_batches, batch_size=args.batch_size)
+        info = agent.update(buffer, num_batches=1, batch_size=args.batch_size)
         if args.disp_loss:
-            logger.log(f"Iteration #{t+1}: losses = {print_float_list(info['loss'])}.")
-        else:
-            logger.log(f"Iteration #{t+1}: finished.")
+            logger.log(f"  Z_func loss = {info['loss'][0]:.6f}.")
         
         # Periodic evaluation.
         if (t+1) % args.freq_eval == 0:
-            logger.log("\n" + "-"*30 + f" evaluate at iteration # {str(t+1).rjust(4)} " + "-"*30)
+            logger.log("\n" + "-"*30 + f" evaluate after step # {str(t+1).rjust(6)} " + "-"*30)
 
             with torch.no_grad():
                 # Display current policy (only valid for tabular case).
                 if is_tabular and args.disp_policy:
                     cur_policy = []
-                    for state in env.states:
+                    for state in env_train.states:
                         cur_policy.append(agent.select_action(state))
                     logger.log(f"+ policy = {cur_policy}.")
 
                 if args.eval:
                     rewards = []
                     for t_eval in range(args.num_eval):
-                        reward = env.eval(agent.select_action, T_eval=args.T_eval)
+                        reward = env_eval.eval(agent.select_action, T_eval=args.T_eval)
                         rewards.append(reward)
                     logger.log(f"+ episodic rewards = {print_float_list(rewards)}.")
                     logger.log(f"+ average reward = {np.average(rewards):.6f}, std = {np.std(rewards):.6f}.")

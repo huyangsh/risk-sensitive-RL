@@ -11,17 +11,17 @@ class TorchDataset:
 
 
     # Core functions: data collection.
-    def start(self, state_dim, action_dim, max_size):
+    def start(self, dim_state, dim_action, max_size):
         # Parameters.
-        self.state_dim  = state_dim
-        self.action_dim = action_dim
+        self.dim_state  = dim_state
+        self.dim_action = dim_action
         self.max_size   = max_size
 
         # Initialization.
-        self.state      = np.zeros((max_size, self.state_dim))
-        self.action     = np.zeros((max_size, self.action_dim))
+        self.state      = np.zeros((max_size, self.dim_state))
+        self.action     = np.zeros((max_size, self.dim_action))
         self.reward     = np.zeros((max_size, 1))
-        self.next_state = np.zeros((max_size, self.state_dim))
+        self.next_state = np.zeros((max_size, self.dim_state))
         self.not_done   = np.zeros((max_size, 1))
 
         self.ptr        = 0

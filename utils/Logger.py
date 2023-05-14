@@ -1,19 +1,27 @@
 from tqdm import tqdm
 
 class Logger:
-    def __init__(self, prefix, use_tqdm=False):
-        self.log_path = prefix + ".log"
-        self.log_file = open(self.log_path, "w")
+    def __init__(self, prefix, use_tqdm=False, flush_freq=0):
+        self.log_path   = prefix + ".log"
+        self.log_file   = open(self.log_path, "w")
 
-        self.use_tqdm = use_tqdm
+        self.use_tqdm   = use_tqdm
+
+        self.flush_freq = flush_freq
+        self.flush_cnt  = 0
 
     def log(self, msg):
+        self.flush_cnt += 1
+        
         if self.use_tqdm:
             tqdm.write(msg)
         else:
             print(msg)
+
         self.log_file.write(msg + "\n")
-        self.log_file.flush()
+        if self.flush_freq > 0 and self.flush_cnt % self.flush_freq == 0:
+            self.log_file.flush()
+            self.flush_cnt = 0
     
     def save(self):
         self.log_file.close()
