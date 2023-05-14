@@ -38,7 +38,7 @@ class Z_Func(nn.Module):
 
 class RFZI_NN(Agent):
     def __init__(self, env, device, beta=0.01, gamma=0.95, tau=0.5, lr=1.0,
-                 emb_func=None, dim_emb=None, dim_hidden=None):
+                 emb_func=None, dim_emb=None, dim_hidden=None, auto_transfer=True):
         # Environment information.
         self.env            = env
 
@@ -80,6 +80,8 @@ class RFZI_NN(Agent):
             self.z_func_current.parameters(), lr=lr
         )
         self.reset()
+
+        self.auto_transfer = auto_transfer
         
 
     # Core functions.
@@ -131,11 +133,14 @@ class RFZI_NN(Agent):
             z_func_loss.backward()
             self.z_func_optimizer.step()
 
-        # Update the target network after all batches.
-        for param, target_param in zip(self.z_func_current.parameters(), self.z_func_target.parameters()):
-            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+        # Update the target network after all batches, and if self.auto_transfer is True.
+        if self.auto_transfer: self.update_target()
 
         return {"loss": loss_list}
+    
+    def update_target(self):
+        for param, target_param in zip(self.z_func_current.parameters(), self.z_func_target.parameters()):
+            target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
     
     def select_action(self, state):
         with torch.no_grad():

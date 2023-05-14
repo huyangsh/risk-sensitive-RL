@@ -27,9 +27,10 @@ class Logger:
         self.log_file.close()
         print(f"[info] Log saved to <{self.log_path}>.")
 
-def print_float_list(lst):
+
+def print_float_list(lst, fmt=".4g"):
     msg = "["
     for x in lst:
-        msg += f"{x:.6f}, "
+        msg += "{:{fmt}}".format(x, fmt=fmt) + ", "
     msg = msg[:-2] + "]"
     return msg

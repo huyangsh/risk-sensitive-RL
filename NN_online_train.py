@@ -35,7 +35,9 @@ parser.add_argument("--batch_size", default=10000, type=int)
 parser.add_argument("--lr", default=0.5, type=float)
 parser.add_argument("--tau", default=0.1, type=float)
 parser.add_argument("--dim_emb", default=100, type=int)
+parser.add_argument("--freq_update", default=1, type=int)
 
+parser.add_argument("--eps", default=0.01, type=float)
 parser.add_argument("--buffer_size", default=1000000, type=int)
 parser.add_argument("--off_ratio", default=0.1, type=float)
 
@@ -57,12 +59,12 @@ args = parser.parse_args()
 log_prefix  = f"./log/active/{args.env}_"
 log_prefix += f"{args.p_perturb}_" if args.env.startswith("Toy") else f"{args.sigma}_"
 log_prefix += f"{args.T_train}_{args.batch_size}_{args.lr}_{args.tau}_" + datetime.now().strftime("%Y%m%d_%H%M%S")
-logger = Logger(prefix=log_prefix, use_tqdm=True, flush_freq=100)
+logger = Logger(prefix=log_prefix, use_tqdm=True, flush_freq=10)
 
 msg  = "="*40 + " Settings " + "="*40 + "\n"
 msg += f"agent = RFZI_NN, env = {args.env}, beta = {args.beta:.4f}, gamma = {args.gamma:.4f},\n"
-msg += f"T_train = {args.T_train}, batch_size = {args.batch_size}, lr = {args.lr:.4f}, tau = {args.tau:.4f}, dim_emb = {args.dim_emb},\n"
-msg += f"buffer_size = {args.buffer_size}, offline_data_ratio = {args.off_ratio:.4f},\n"
+msg += f"T_train = {args.T_train}, batch_size = {args.batch_size}, lr = {args.lr:.4f}, tau = {args.tau:.4f}, dim_emb = {args.dim_emb}, freq_update = {args.freq_update},\n"
+msg += f"eps = {args.eps}, buffer_size = {args.buffer_size}, offline_data_ratio = {args.off_ratio:.4f},\n"
 msg += f"freq_eval = {args.freq_eval}, num_eval = {args.num_eval}, T_eval = {args.T_eval}, thres_eval = {args.thres_eval:.4f},\n"
 msg += f"disp_loss = {args.disp_loss}, disp_V_opt = {args.disp_V_opt}, disp_V_pi = {args.disp_V_pi}, disp_policy = {args.disp_policy}, eval = {args.eval}.\n"
 msg += "=" * 90 + "\n"
@@ -187,27 +189,42 @@ agent = RFZI_NN(
     beta=args.beta, gamma=args.gamma, 
     lr=args.lr, tau=args.tau,
     emb_func=emb_func, dim_emb=dim_emb,
-    dim_hidden=(256*env_train.dim_state, 32)
+    dim_hidden=(256*env_train.dim_state, 32),
+    auto_transfer=False
 )
 logger.log(f"> Setting up agent: beta = {args.beta}, gamma = {args.gamma}, lr = {args.lr}, tau = {args.tau}.\n\n")
 
 try:
+    episode = 0
+    step_cnt, reward_tot, loss_list = 0, 0, []
     state, done = env_train.reset(), False
     for t in tqdm(range(args.T_train)):
         # Take one step and collect data.
-        action = agent.select_action(state)
+        if np.random.binomial(n=1, p=args.eps):
+            action = random.choice(env_train.actions)
+        else:
+            action = agent.select_action(state)
         next_state, reward, done, _ = env_train.step(action)
         buffer.add(state, action, reward, next_state, done)
-        logger.log(f"step {t}: {state}, {action}, {reward}, {next_state}, {done}.")
         
-        state = next_state
+        state       = next_state
+        reward_tot += reward
+        step_cnt   += 1
+        
         if done:  # Restart at the end of episode.
+            episode += 1
+            logger.log(f"Episode #{episode}: {step_cnt} steps, cumulative reward = {reward_tot:.4f}.")
+            logger.log(f"  Z_func loss: {print_float_list(loss_list)}.")
+
             state, done = env_train.reset(), False
+            step_cnt, reward_tot, loss_list = 0, 0, []
 
         # Update agent.
         info = agent.update(buffer, num_batches=1, batch_size=args.batch_size)
         if args.disp_loss:
-            logger.log(f"  Z_func loss = {info['loss'][0]:.6f}.")
+            loss_list.append(info["loss"][0])
+        if (t+1) % args.freq_update == 0:
+            agent.update_target()
         
         # Periodic evaluation.
         if (t+1) % args.freq_eval == 0:
