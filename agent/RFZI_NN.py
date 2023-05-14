@@ -14,8 +14,8 @@ class Z_Func(nn.Module):
     def __init__(self, dim_state, dim_action, env, device):
         super(Z_Func, self).__init__()
         # Warning: use sin-cos representation!
-        self.l1 = nn.Linear(dim_state + dim_action, 256*dim_state)
-        # self.l1 = nn.Linear(200*dim_state + dim_action, 256*dim_state)  # (128/32, 16) works for the small toy model.
+        # self.l1 = nn.Linear(dim_state + dim_action, 256*dim_state)
+        self.l1 = nn.Linear(200*dim_state + dim_action, 256*dim_state)  # (128/32, 16) works for the small toy model.
         # self.l1 = nn.Linear(dim_state+2 + dim_action, 256*dim_state)
         self.l2 = nn.Linear(256*dim_state, 32)
         self.l3 = nn.Linear(32, 1)

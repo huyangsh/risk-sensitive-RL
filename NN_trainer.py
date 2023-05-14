@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data_eps', default=0.3, type=float)
 # policy used to generate data
 parser.add_argument('--gendata_pol', default='ppo', type=str)  
-parser.add_argument('--env', default='Pendulum', type=str)
+parser.add_argument('--env', default='toy_100', type=str)
 parser.add_argument('--max_trn_steps', default=int(5e5), type=float)
 parser.add_argument('--eval_freq', default=10, type=float)
 parser.add_argument('--eval_episodes', default=10, type=int)

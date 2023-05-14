@@ -76,7 +76,7 @@ class Pendulum(Env):
 
     """
 
-    def __init__(self, num_actions=100, g=10.0):
+    def __init__(self, num_actions=100, sigma=0.0, g=10.0):
         self.max_speed = 8
         self.max_torque = 2.0
         self.dt = 0.05
@@ -98,6 +98,7 @@ class Pendulum(Env):
         self.actions = [np.array([x]) for x in np.linspace(start=-self.max_torque, stop=self.max_torque, num=self.num_actions)]
         
         self.gamma = 1
+        self.sigma = sigma    # magnitude of Gaussian noise
 
         # Internal state.
         self.state = None
@@ -113,7 +114,7 @@ class Pendulum(Env):
         u = np.clip(u, -self.max_torque, self.max_torque)[0]
         costs = self._angle_normalize(th) ** 2 + 0.1 * thdot ** 2 + 0.001 * (u ** 2)
 
-        newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 / (m * l ** 2) * u) * dt
+        newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 / (m * l ** 2) * u) * dt + self.sigma * np.random.normal(0,1)
         newthdot = np.clip(newthdot, -self.max_speed, self.max_speed)
         newth = th + newthdot * dt
 

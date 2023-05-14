@@ -59,7 +59,7 @@ class CartPole(Env):
         195.0 over 100 consecutive trials.
     """
 
-    def __init__(self):
+    def __init__(self, sigma=0.0):
         self.gravity         = 9.8
         self.masscart        = 1.0
         self.masspole        = 0.1
@@ -94,6 +94,7 @@ class CartPole(Env):
         self.actions = [np.array([0]), np.array([1])]
 
         self.gamma = 1
+        self.sigma = sigma    # magnitude of Gaussian noise
 
         # Internal states.
         self.state = None
@@ -116,9 +117,9 @@ class CartPole(Env):
             force + self.polemass_length * theta_dot ** 2 * sintheta
         ) / self.total_mass
         thetaacc = (self.gravity * sintheta - costheta * temp) / (
-            self.length * (4.0 / 3.0 - self.masspole * costheta ** 2 / self.total_mass)
+            self.length * (4.0 / 3.0 - self.masspole * costheta ** 2 / self.total_mass) + self.sigma * np.random.normal(0,1)
         )
-        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass + self.sigma * np.random.normal(0,1)
 
         if self.kinematics_integrator == "euler":
             x = x + self.tau * x_dot
