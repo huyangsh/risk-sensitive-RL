@@ -7,7 +7,7 @@ import argparse
 import random
 
 
-from env import RMDP, CartPole, Pendulum, build_small_toy_env, build_large_toy_env
+from env import RMDP, CartPole, Pendulum, build_toy_10_env, build_toy_100_env, build_toy_1000_env
 from data import Dataset, TorchDataset
 
 
@@ -35,7 +35,7 @@ if env_name == "RMDP":
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
-    env = build_large_toy_env(p_perturb, beta, gamma)
+    env = build_toy_1000_env(p_perturb, beta, gamma)
 
     if alg_name == "random":
         policy = lambda x: random.choice(env.actions)
@@ -50,12 +50,12 @@ if env_name == "RMDP":
 
     dataset = Dataset()
     dataset.store(trajectory)
-    dataset.save("./data/Toy/toy_large_random.npy")
+    dataset.save("./data/Toy/toy_1000_random.npy")
 elif env_name == "RMDP_torch":
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
-    env = build_large_toy_env(p_perturb, beta, gamma)
+    env = build_toy_100_env(p_perturb, beta, gamma)
 
     if alg_name == "random":
         policy = lambda x: random.choice(env.actions)

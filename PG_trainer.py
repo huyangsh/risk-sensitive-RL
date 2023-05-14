@@ -5,7 +5,7 @@ from math import exp, log
 import matplotlib.pyplot as plt
 
 from agent import PolicyGradientAgent
-from env import RMDP, build_small_toy_env, build_large_toy_env
+from env import RMDP, build_toy_10_env, build_toy_100_env
 
 
 THRES = 1e-5
@@ -19,7 +19,7 @@ np.random.seed(seed)
 p_perturb = 0.15
 beta  = 0.01
 gamma = 0.95
-env = build_large_toy_env(p_perturb, beta, gamma, THRES)
+env = build_toy_100_env(p_perturb, beta, gamma, THRES)
 
 M   = 0.005
 eps = 1e-2

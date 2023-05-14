@@ -7,22 +7,39 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from . import Agent
+from env import RMDP, CartPole
 
 
 class Z_Func(nn.Module):
-    def __init__(self, dim_state, dim_action):
+    def __init__(self, dim_state, dim_action, env, device):
         super(Z_Func, self).__init__()
         # Warning: use sin-cos representation!
-        # self.l1 = nn.Linear(dim_state + dim_action, 256*dim_state)
-        # self.l1 = nn.Linear(16*dim_state + dim_action, 256*dim_state)  # (128/32, 16) works for the small toy model.
-        self.l1 = nn.Linear(dim_state+2 + dim_action, 256*dim_state)
+        self.l1 = nn.Linear(dim_state + dim_action, 256*dim_state)
+        # self.l1 = nn.Linear(200*dim_state + dim_action, 256*dim_state)  # (128/32, 16) works for the small toy model.
+        # self.l1 = nn.Linear(dim_state+2 + dim_action, 256*dim_state)
         self.l2 = nn.Linear(256*dim_state, 32)
         self.l3 = nn.Linear(32, 1)
+
+        self.env = env
+        self.device = device
+        if isinstance(env, RMDP):
+            DIM_EMBEDDINGS = 100
+            mat = torch.FloatTensor(np.arange(self.env.num_states)[:, None])
+            mat = mat * torch.FloatTensor(np.arange(1, DIM_EMBEDDINGS+1))[None, :]
+            mat = mat * (2*torch.pi/self.env.num_states)
+            self.embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(self.device)
+        else:
+            self.embedding = None
     
     def _state_embedding(self, state, action):
+        # The naive version
         # return torch.cat([state, action], 1)
+
+        # Special to CartPole
         # return torch.cat([state, torch.sin(state[:,2][:,None]), torch.cos(state[:,2][:,None]), action], 1)
-        return torch.cat([
+        
+        # Special to Toy
+        """return torch.cat([
             torch.sin(state/100), torch.cos(state/100),
             torch.sin(2*state/100), torch.cos(2*state/100),
             torch.sin(3*state/100), torch.cos(3*state/100),
@@ -32,7 +49,13 @@ class Z_Func(nn.Module):
             torch.sin(7*state/100), torch.cos(7*state/100),
             torch.sin(8*state/100), torch.cos(8*state/100),
             action
-        ], 1)
+        ], 1)"""
+
+        # Larger Toy
+        if self.embedding is not None:
+            return torch.cat([self.embedding[state.long().flatten()], action], 1)
+        else:
+            return torch.cat([state, action], 1)
 
     def forward(self, state, action):
         # Warning: use sin-cos representation!
@@ -82,7 +105,7 @@ class RFZI_NN(Agent):
         
         # Internal states.
         self.device = device
-        self.z_func_current = Z_Func(self.dim_state, self.dim_action).to(device)
+        self.z_func_current = Z_Func(self.dim_state, self.dim_action, self.env, self.device).to(device)
         self.z_func_optimizer = torch.optim.SGD(
             self.z_func_current.parameters(),
             lr=z_func_lr
@@ -124,6 +147,11 @@ class RFZI_NN(Agent):
                 target_Z = self.beta*next_rewards - torch.log(target_Z)
                 target_Z = target_Z.reshape(shape=(batch_size, self.num_actions)).amax(dim=1)
                 target_Z = torch.exp(-self.gamma*target_Z)
+                
+                # Warning: clipping for CartPole.
+                if isinstance(self.env, CartPole):
+                    target_Z[states[:,0] > self.env.x_threshold] = 1
+                    target_Z[states[:,2] > self.env.theta_threshold_radians] = 1
 
             current_Z = self.z_func_current(states, actions).flatten()
             z_func_loss = F.mse_loss(current_Z, target_Z)

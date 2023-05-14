@@ -4,7 +4,7 @@ import random
 import argparse
 
 from data import TorchDataset
-from env import CartPole, Pendulum, build_small_toy_env, build_large_toy_env
+from env import CartPole, Pendulum, build_toy_10_env, build_toy_100_env, build_toy_1000_env
 from agent import RFZI_NN
 
 seed = 20
@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data_eps', default=0.3, type=float)
 # policy used to generate data
 parser.add_argument('--gendata_pol', default='ppo', type=str)  
-parser.add_argument('--env', default='CartPole', type=str)
+parser.add_argument('--env', default='Pendulum', type=str)
 parser.add_argument('--max_trn_steps', default=int(5e5), type=float)
 parser.add_argument('--eval_freq', default=10, type=float)
 parser.add_argument('--eval_episodes', default=10, type=int)
@@ -43,20 +43,26 @@ if args.env == "CartPole":
     env = CartPole()
     data_path = f"./data/CartPole/CartPole_random.pkl"
 elif args.env == "Pendulum":
-    env = Pendulum()
-    data_path = f"./data/Pendulum/Pendulum_SAC_0.3.pkl"
-elif args.env == "toy_small":
+    env = Pendulum(num_actions=5)
+    data_path = f"./data/Pendulum/Pendulum_random.pkl"
+elif args.env == "toy_10":
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
-    env = build_small_toy_env(p_perturb, beta, gamma)
-    data_path = f"./data/Toy/toy_small_torch_random.pkl"
-elif args.env == "toy_large":
+    env = build_toy_10_env(p_perturb, beta, gamma)
+    data_path = f"./data/Toy/toy_10_torch_random.pkl"
+elif args.env == "toy_100":
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
-    env = build_large_toy_env(p_perturb, beta, gamma)
-    data_path = f"./data/Toy/toy_large_torch_random.pkl"
+    env = build_toy_100_env(p_perturb, beta, gamma)
+    data_path = f"./data/Toy/toy_100_torch_random.pkl"
+elif args.env == "toy_1000":
+    p_perturb = 0.15
+    beta  = 0.01
+    gamma = 0.95
+    env = build_toy_1000_env(p_perturb, beta, gamma)
+    data_path = f"./data/Toy/toy_1000_torch_random.pkl"
 else:
     raise NotImplementedError
 

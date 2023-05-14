@@ -76,7 +76,7 @@ class Pendulum(Env):
 
     """
 
-    def __init__(self, g=10.0):
+    def __init__(self, num_actions=100, g=10.0):
         self.max_speed = 8
         self.max_torque = 2.0
         self.dt = 0.05
@@ -94,7 +94,7 @@ class Pendulum(Env):
         # Environment parameters (discretiz actions).
         self.dim_state = 3
         self.dim_action = 1
-        self.num_actions = 100
+        self.num_actions = num_actions
         self.actions = [np.array([x]) for x in np.linspace(start=-self.max_torque, stop=self.max_torque, num=self.num_actions)]
         
         self.gamma = 1
