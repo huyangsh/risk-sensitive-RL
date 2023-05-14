@@ -9,7 +9,9 @@ import torch
 import random
 
 from data import TorchDataset
-from env import CartPole, Pendulum, build_toy_10_env, build_toy_100_env, build_toy_1000_env
+from env import CartPole, Pendulum
+from env import build_toy_10_env, build_toy_100_env, build_toy_1000_env
+from env import reward_src_10, reward_src_100, reward_src_1000
 from agent import RFZI_NN
 from utils import Logger, print_float_list
 
@@ -49,7 +51,7 @@ args = parser.parse_args()
 
 
 # Logging configuration.
-log_prefix  = f"./log/{args.env}_"
+log_prefix  = f"./log/active/{args.env}_"
 log_prefix += f"{args.p_perturb}_" if args.env.startswith("Toy") else f"{args.sigma}_"
 log_prefix += f"{args.num_train}_{args.num_batches}_{args.batch_size}_{args.lr}_{args.tau}_" + datetime.now().strftime("%Y%m%d_%H%M%S")
 logger = Logger(prefix=log_prefix, use_tqdm=True)
@@ -119,6 +121,7 @@ elif args.env == "Toy-10":
     dim_emb = 2 * args.dim_emb
 
     logger.log(f"> Setting up Toy-10 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
+    logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_10)}>.")
     logger.log(f"  + Using data from path <{data_path}>.")
 elif args.env == "Toy-100":
     is_tabular = True
@@ -134,6 +137,7 @@ elif args.env == "Toy-100":
     dim_emb = 2 * args.dim_emb
 
     logger.log(f"> Setting up Toy-100 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
+    logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_100)}>.")
     logger.log(f"  + Using data from path <{data_path}>.")
 elif args.env == "Toy-1000":
     is_tabular = True
@@ -149,6 +153,7 @@ elif args.env == "Toy-1000":
     dim_emb = 2 * args.dim_emb
     
     logger.log(f"> Setting up Toy-1000 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
+    logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_1000)}>.")
     logger.log(f"  + Using data from path <{data_path}>...")
 else:
     raise NotImplementedError
@@ -160,8 +165,9 @@ logger.log(f"  + Data successfully loaded.")
 # Display optimal value (only valid for tabular case).
 if is_tabular and args.disp_V_opt:
     opt_val = (env.V_opt*env.distr_init).sum()
-    msg  = "> Optimal policy for :\n"
-    msg += f"  + V_opt = {print_float_list(env.V_opt)}, E[V_opt] = {opt_val:.6f}.\n"
+    msg  = "> Optimal policy calculated for the tabular environment:\n"
+    msg += f"  + V_opt = {print_float_list(env.V_opt)}.\n"
+    msg += f"  + E[V_opt] = {opt_val:.6f}.\n"
     msg += f"  + pi_opt = {env.V_to_Q(env.V_opt).argmax(axis=1).flatten().tolist()}."
     logger.log(msg)
 
