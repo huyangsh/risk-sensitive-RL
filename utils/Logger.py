@@ -15,9 +15,9 @@ class Logger:
         self.log_file.write(msg + "\n")
         self.log_file.flush()
     
-    def __del__(self):
+    def save(self):
         self.log_file.close()
-        print(f"[info] Unexpected exit: log saved to <{self.log_path}>.")
+        print(f"[info] Log saved to <{self.log_path}>.")
 
 def print_float_list(lst):
     msg = "["

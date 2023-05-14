@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from . import Agent
-from env import RMDP, CartPole
 
 
 class Z_Func(nn.Module):

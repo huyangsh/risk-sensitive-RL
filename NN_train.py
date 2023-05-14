@@ -2,6 +2,7 @@ import argparse
 import signal
 from tqdm import tqdm
 from datetime import datetime
+import pickle as pkl
 
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ import random
 from data import TorchDataset
 from env import CartPole, Pendulum, build_toy_10_env, build_toy_100_env, build_toy_1000_env
 from agent import RFZI_NN
-from Logger import Logger, print_float_list
+from utils import Logger, print_float_list
 
 
 parser = argparse.ArgumentParser()
@@ -18,7 +19,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", default=20, type=int)
 parser.add_argument("--device", default="cuda", type=str, choices=["cpu", "cuda"])
 
-parser.add_argument("--env", type=str, choices=["CartPole", "Pendulum", "Toy_10", "Toy_100", "Toy_1000"])
+parser.add_argument("--env", type=str, choices=["CartPole", "Pendulum", "Toy-10", "Toy-100", "Toy-1000"])
 parser.add_argument("--data_path", type=str)
 parser.add_argument("--beta", default=0.01, type=float)
 parser.add_argument("--gamma", default=0.95, type=float)
@@ -48,7 +49,9 @@ args = parser.parse_args()
 
 
 # Logging configuration.
-log_prefix = f"./log/{args.env}_{args.num_train}_{args.num_batches}_{args.batch_size}_{args.lr}_{args.tau}_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+log_prefix  = f"./log/{args.env}_"
+log_prefix += f"{args.p_perturb}_" if args.env.startswith("Toy") else f"{args.sigma}_"
+log_prefix += f"{args.num_train}_{args.num_batches}_{args.batch_size}_{args.lr}_{args.tau}_" + datetime.now().strftime("%Y%m%d_%H%M%S")
 logger = Logger(prefix=log_prefix, use_tqdm=True)
 
 msg  = "="*40 + " Settings " + "="*40 + "\n"
@@ -56,9 +59,13 @@ msg += f"agent = RFZI_NN, env = {args.env}, beta = {args.beta:.4f}, gamma = {arg
 msg += f"num_train = {args.num_train}, num_batches = {args.num_batches}, batch_size = {args.batch_size}, lr = {args.lr:.4f}, tau = {args.tau:.4f}, dim_emb = {args.dim_emb},\n"
 msg += f"freq_eval = {args.freq_eval}, num_eval = {args.num_eval}, T_eval = {args.T_eval}, thres_eval = {args.thres_eval:.4f},\n"
 msg += f"disp_loss = {args.disp_loss}, disp_V_opt = {args.disp_V_opt}, disp_V_pi = {args.disp_V_pi}, disp_policy = {args.disp_policy}, eval = {args.eval}.\n"
-msg += "*" * 90 + "\n"
-msg += f"> Saving to <{log_prefix}>.\n"
+msg += "=" * 90 + "\n"
+msg += f"> Saving to <{log_prefix}>."
 logger.log(msg)
+
+with open(log_prefix + ".pkl", "wb") as f:
+    pkl.dump(args, f)
+    msg += f"> Settings saved to <{log_prefix}.pkl>.\n"
 
 
 # Random seeding.
@@ -98,10 +105,10 @@ elif args.env == "Pendulum":
     logger.log(f"> Setting up Pendulum with Gausian noise (sigma = {args.sigma:.4f}).")
     logger.log(f"  + Action space contains {args.num_actions} actions: {env.actions}")
     logger.log(f"  + Using data from path <{data_path}>.")
-elif args.env == "Toy_10":
+elif args.env == "Toy-10":
     is_tabular = True
     env = build_toy_10_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
-    if args.data_path is None: data_path = f"./data/Toy/Toy_10_torch_random.pkl"
+    if args.data_path is None: data_path = f"./data/Toy/Toy-10_torch_random.pkl"
 
     mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
@@ -111,12 +118,12 @@ elif args.env == "Toy_10":
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
 
-    logger.log(f"> Setting up Toy_10 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
+    logger.log(f"> Setting up Toy-10 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
     logger.log(f"  + Using data from path <{data_path}>.")
-elif args.env == "Toy_100":
+elif args.env == "Toy-100":
     is_tabular = True
     env = build_toy_100_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
-    if args.data_path is None: data_path = f"./data/Toy/Toy_100_torch_random.pkl"
+    if args.data_path is None: data_path = f"./data/Toy/Toy-100_torch_random.pkl"
 
     mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
@@ -126,12 +133,12 @@ elif args.env == "Toy_100":
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
 
-    logger.log(f"> Setting up Toy_100 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
+    logger.log(f"> Setting up Toy-100 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
     logger.log(f"  + Using data from path <{data_path}>.")
-elif args.env == "Toy_1000":
+elif args.env == "Toy-1000":
     is_tabular = True
     env = build_toy_1000_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
-    if args.data_path is None: data_path = f"./data/Toy/Toy_1000_torch_random.pkl"
+    if args.data_path is None: data_path = f"./data/Toy/Toy-1000_torch_random.pkl"
 
     mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
@@ -141,7 +148,7 @@ elif args.env == "Toy_1000":
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
     
-    logger.log(f"> Setting up Toy_1000 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
+    logger.log(f"> Setting up Toy-1000 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
     logger.log(f"  + Using data from path <{data_path}>...")
 else:
     raise NotImplementedError
@@ -153,11 +160,10 @@ logger.log(f"  + Data successfully loaded.")
 # Display optimal value (only valid for tabular case).
 if is_tabular and args.disp_V_opt:
     opt_val = (env.V_opt*env.distr_init).sum()
-    msg  = "> Environment information:\n"
-    msg += f"  + V_opt = {opt_val:.6f}.\n"
-    msg += f"  + pi_opt = tbd."
+    msg  = "> Optimal policy for :\n"
+    msg += f"  + V_opt = {print_float_list(env.V_opt)}, E[V_opt] = {opt_val:.6f}.\n"
+    msg += f"  + pi_opt = {env.V_to_Q(env.V_opt).argmax(axis=1).flatten().tolist()}."
     logger.log(msg)
-
 
 # Train RFZI agent.
 agent = RFZI_NN(
@@ -169,51 +175,43 @@ agent = RFZI_NN(
 )
 logger.log(f"> Setting up agent: beta = {args.beta}, gamma = {args.gamma}, lr = {args.lr}, tau = {args.tau}.\n\n")
 
-for t in tqdm(range(args.num_train)):
-    # Update agent.
-    info = agent.update(dataset, num_batches=args.num_batches, batch_size=args.batch_size)
-    if args.disp_loss:
-        logger.log(f"Iteration #{t+1}: losses = {print_float_list(info['loss'])}.")
-    else:
-        logger.log(f"Iteration #{t+1}: finished.")
-    
-    # Periodic evaluation.
-    if (t+1) % args.freq_eval == 0:
-        logger.log("\n" + "-"*30 + f" evaluate at iteration # {str(t+1).rjust(4)} " + "-"*30)
-
-        with torch.no_grad():
-            # Display current policy (only valid for tabular case).
-            if is_tabular and args.disp_policy:
-                cur_policy = []
-                for state in env.states:
-                    cur_policy.append(agent.select_action(state))
-                logger.log(f"+ policy = {cur_policy}.")
-
-            if args.eval:
-                rewards = []
-                for t_eval in range(args.num_eval):
-                    reward = env.eval(agent.select_action, T_eval=args.T_eval)
-                    rewards.append(reward)
-                logger.log(f"+ episodic rewards = {print_float_list(rewards)}.")
-                logger.log(f"+ average reward = {np.average(rewards):.6f}, std = {np.std(rewards):.6f}.")
-            
-            if is_tabular and args.disp_V_pi:
-                V_pi = agent.calc_policy_reward()
-                logger.log(f"+ average V_pi = {V_pi:.6f}.")
+try:
+    for t in tqdm(range(args.num_train)):
+        # Update agent.
+        info = agent.update(dataset, num_batches=args.num_batches, batch_size=args.batch_size)
+        if args.disp_loss:
+            logger.log(f"Iteration #{t+1}: losses = {print_float_list(info['loss'])}.")
+        else:
+            logger.log(f"Iteration #{t+1}: finished.")
         
-        logger.log("="*90 + "\n")
+        # Periodic evaluation.
+        if (t+1) % args.freq_eval == 0:
+            logger.log("\n" + "-"*30 + f" evaluate at iteration # {str(t+1).rjust(4)} " + "-"*30)
+
+            with torch.no_grad():
+                # Display current policy (only valid for tabular case).
+                if is_tabular and args.disp_policy:
+                    cur_policy = []
+                    for state in env.states:
+                        cur_policy.append(agent.select_action(state))
+                    logger.log(f"+ policy = {cur_policy}.")
+
+                if args.eval:
+                    rewards = []
+                    for t_eval in range(args.num_eval):
+                        reward = env.eval(agent.select_action, T_eval=args.T_eval)
+                        rewards.append(reward)
+                    logger.log(f"+ episodic rewards = {print_float_list(rewards)}.")
+                    logger.log(f"+ average reward = {np.average(rewards):.6f}, std = {np.std(rewards):.6f}.")
+                
+                if is_tabular and args.disp_V_pi:
+                    V_pi = agent.calc_policy_reward()
+                    logger.log(f"+ E[V_pi] = {V_pi:.6f}.")
+            
+            logger.log("-"*90 + "\n")
+except KeyboardInterrupt:
+    pass
 
 agent.save(log_prefix + ".ckpt")
-logger.log(f"> Agent saved to <{log_prefix}.ckpt>.")
-del logger
-
-
-# Wrong: handle interruptions and unexpected exits.
-def handler(signum, frame):
-    print("Exit!")
-    agent.save(log_prefix + ".ckpt")
-    print(f"[info] Unexpected exit: agent saved to <{log_prefix}.ckpt>.")
-
-signal.signal(signal.SIGTERM, handler)
-signal.signal(signal.SIGINT, handler)
-signal.signal(signal.SIGTSTP, handler)
+logger.log(f"\n\n> Training completed after {t} iterations: agent saved to <{log_prefix}.ckpt>.")
+logger.save()
