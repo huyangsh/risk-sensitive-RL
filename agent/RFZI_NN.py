@@ -71,7 +71,7 @@ class RFZI_NN(Agent):
             emb_func = lambda x: x
             dim_emb  = self.dim_state
         else:
-            assert dim_emb == emb_func(torch.zeros(size=(self.dim_state,))).shape[1]
+            assert dim_emb == len(emb_func(torch.zeros(size=(self.dim_state,))).flatten())
         assert len(dim_hidden) == 2
 
         self.z_func_current = Z_Func(
