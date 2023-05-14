@@ -19,7 +19,7 @@ class Logger:
             print(msg)
 
         self.log_file.write(msg + "\n")
-        if self.flush_freq > 0 and self.flush_cnt % self.flush_freq == 0:
+        if self.flush_freq == 0 or self.flush_cnt % self.flush_freq == 0:
             self.log_file.flush()
             self.flush_cnt = 0
     

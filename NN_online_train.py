@@ -46,6 +46,8 @@ parser.add_argument("--num_eval", default=10, type=int)
 parser.add_argument("--T_eval", default=1000, type=int)
 parser.add_argument("--thres_eval", default=1e-5, type=float)
 
+parser.add_argument("--freq_save", default=0, type=int)
+
 parser.add_argument("--disp_loss", default=True, type=bool)
 parser.add_argument("--eval", default=True, type=bool)
 parser.add_argument("--disp_V_opt", action="store_true")
@@ -59,7 +61,7 @@ args = parser.parse_args()
 log_prefix  = f"./log/active/{args.env}_"
 log_prefix += f"{args.p_perturb}_" if args.env.startswith("Toy") else f"{args.sigma}_"
 log_prefix += f"{args.T_train}_{args.batch_size}_{args.lr}_{args.tau}_" + datetime.now().strftime("%Y%m%d_%H%M%S")
-logger = Logger(prefix=log_prefix, use_tqdm=True, flush_freq=10)
+logger = Logger(prefix=log_prefix, use_tqdm=True, flush_freq=1)
 
 msg  = "="*40 + " Settings " + "="*40 + "\n"
 msg += f"agent = RFZI_NN, env = {args.env}, beta = {args.beta:.4f}, gamma = {args.gamma:.4f},\n"
@@ -193,6 +195,8 @@ agent = RFZI_NN(
     auto_transfer=False
 )
 logger.log(f"> Setting up agent: beta = {args.beta}, gamma = {args.gamma}, lr = {args.lr}, tau = {args.tau}.\n\n")
+if args.freq_save > 0:
+    logger.log(f"  + Automatically save agent every {args.freq_save} iterations.")
 
 try:
     episode = 0
@@ -225,6 +229,11 @@ try:
             loss_list.append(info["loss"][0])
         if (t+1) % args.freq_update == 0:
             agent.update_target()
+        
+        # Automatic saving.
+        if args.freq_save > 0 and (t+1) % args.freq_save == 0:
+            agent.save(f"{log_prefix}_{t+1}.ckpt")
+            logger.log(f"\n> Current agent automatically saved to <{log_prefix}_{t+1}.ckpt>.\n")
         
         # Periodic evaluation.
         if (t+1) % args.freq_eval == 0:

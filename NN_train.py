@@ -41,6 +41,8 @@ parser.add_argument("--num_eval", default=10, type=int)
 parser.add_argument("--T_eval", default=1000, type=int)
 parser.add_argument("--thres_eval", default=1e-5, type=float)
 
+parser.add_argument("--freq_save", default=0, type=int)
+
 parser.add_argument("--disp_loss", default=True, type=bool)
 parser.add_argument("--eval", default=True, type=bool)
 parser.add_argument("--disp_V_opt", action="store_true")
@@ -185,6 +187,8 @@ agent = RFZI_NN(
     dim_hidden=(256*env.dim_state, 32)
 )
 logger.log(f"> Setting up agent: beta = {args.beta}, gamma = {args.gamma}, lr = {args.lr}, tau = {args.tau}.\n\n")
+if args.freq_save > 0:
+    logger.log(f"  + Automatically save agent every {args.freq_save} iterations.")
 
 try:
     for t in tqdm(range(args.num_train)):
@@ -194,6 +198,11 @@ try:
             logger.log(f"Iteration #{t+1}: losses = {print_float_list(info['loss'])}.")
         else:
             logger.log(f"Iteration #{t+1}: finished.")
+        
+        # Automatic saving.
+        if args.freq_save > 0 and (t+1) % args.freq_save == 0:
+            agent.save(f"{log_prefix}_{t+1}.ckpt")
+            logger.log(f"\n> Current agent automatically saved to <{log_prefix}_{t+1}.ckpt>.\n")
         
         # Periodic evaluation.
         if (t+1) % args.freq_eval == 0:
