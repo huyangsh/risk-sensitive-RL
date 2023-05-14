@@ -2,7 +2,7 @@ import numpy as np
 from math import sin, cos, pi
 from . import RMDP
 
-def build_toy_10_env(p_perturb, beta, gamma, thres=1e-5):
+def build_toy_10_env(p_perturb, beta, gamma, thres=1e-5, calc_opt=True):
     num_states  = 14
     num_actions = 3    # 0 = left, 1 = stay, 2 = right.
 
@@ -19,9 +19,9 @@ def build_toy_10_env(p_perturb, beta, gamma, thres=1e-5):
 
     distr_init = np.ones(shape=(num_states,), dtype=np.float64) / num_states
 
-    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma, thres)
+    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma, thres, calc_opt)
 
-def build_toy_100_env(p_perturb, beta, gamma, thres=1e-5):
+def build_toy_100_env(p_perturb, beta, gamma, thres=1e-5, calc_opt=True):
     num_states  = 100
     num_actions = 3    # 0 = left, 1 = stay, 2 = right.
 
@@ -56,10 +56,10 @@ def build_toy_100_env(p_perturb, beta, gamma, thres=1e-5):
 
     distr_init = np.ones(shape=(num_states,), dtype=np.float64) / num_states
 
-    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma, thres)
+    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma, thres, calc_opt)
 
 
-def build_toy_1000_env(p_perturb, beta, gamma, thres=1e-5):
+def build_toy_1000_env(p_perturb, beta, gamma, thres=1e-2, calc_opt=False):
     num_states  = 1000
     num_actions = 3    # 0 = left, 1 = stay, 2 = right.
 
@@ -85,4 +85,4 @@ def build_toy_1000_env(p_perturb, beta, gamma, thres=1e-5):
 
     distr_init = np.ones(shape=(num_states,), dtype=np.float64) / num_states
 
-    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma, thres=1e-2)
+    return RMDP(num_states, num_actions, distr_init, reward, prob, beta, gamma, thres, calc_opt)

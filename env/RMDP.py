@@ -7,7 +7,7 @@ from . import Env
 
 
 class RMDP(Env):
-    def __init__(self, num_states, num_actions, distr_init, reward, prob, beta, gamma, thres=1e-5):
+    def __init__(self, num_states, num_actions, distr_init, reward, prob, beta, gamma, thres=1e-5, calc_opt=True):
         assert distr_init.shape == (num_states,)
         assert reward.shape == (num_states, num_actions)
         assert prob.shape == (num_states, num_actions, num_states)
@@ -32,8 +32,9 @@ class RMDP(Env):
         self.thres  = thres
 
         # Utility: precalculated optimal risk measure.
-        self.V_opt     = self._DP_opt(thres=self.thres)
-        self.V_opt_avg = (self.V_opt*self.distr_init).sum()
+        if calc_opt:
+            self.V_opt     = self._DP_opt(thres=self.thres)
+            self.V_opt_avg = (self.V_opt*self.distr_init).sum()
 
 
     # Environment functions (compatible with OpenAI gym).

@@ -11,56 +11,19 @@ from env import RMDP, CartPole
 
 
 class Z_Func(nn.Module):
-    def __init__(self, dim_state, dim_action, env, device):
+    def __init__(self, dim_emb, dim_action, dim_hidden, emb_func, device):
         super(Z_Func, self).__init__()
-        # Warning: use sin-cos representation!
-        # self.l1 = nn.Linear(dim_state + dim_action, 256*dim_state)
-        self.l1 = nn.Linear(200*dim_state + dim_action, 256*dim_state)  # (128/32, 16) works for the small toy model.
-        # self.l1 = nn.Linear(dim_state+2 + dim_action, 256*dim_state)
-        self.l2 = nn.Linear(256*dim_state, 32)
-        self.l3 = nn.Linear(32, 1)
 
-        self.env = env
-        self.device = device
-        if isinstance(env, RMDP):
-            DIM_EMBEDDINGS = 100
-            mat = torch.FloatTensor(np.arange(self.env.num_states)[:, None])
-            mat = mat * torch.FloatTensor(np.arange(1, DIM_EMBEDDINGS+1))[None, :]
-            mat = mat * (2*torch.pi/self.env.num_states)
-            self.embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(self.device)
-        else:
-            self.embedding = None
+        self.l1 = nn.Linear(dim_emb+dim_action, dim_hidden[0])
+        self.l2 = nn.Linear(dim_hidden[0], dim_hidden[1])
+        self.l3 = nn.Linear(dim_hidden[1], 1)
+
+        self.device   = device
+        self.emb_func = emb_func
     
-    def _state_embedding(self, state, action):
-        # The naive version
-        # return torch.cat([state, action], 1)
-
-        # Special to CartPole
-        # return torch.cat([state, torch.sin(state[:,2][:,None]), torch.cos(state[:,2][:,None]), action], 1)
-        
-        # Special to Toy
-        """return torch.cat([
-            torch.sin(state/100), torch.cos(state/100),
-            torch.sin(2*state/100), torch.cos(2*state/100),
-            torch.sin(3*state/100), torch.cos(3*state/100),
-            torch.sin(4*state/100), torch.cos(4*state/100),
-            torch.sin(5*state/100), torch.cos(5*state/100),
-            torch.sin(6*state/100), torch.cos(6*state/100),
-            torch.sin(7*state/100), torch.cos(7*state/100),
-            torch.sin(8*state/100), torch.cos(8*state/100),
-            action
-        ], 1)"""
-
-        # Larger Toy
-        if self.embedding is not None:
-            return torch.cat([self.embedding[state.long().flatten()], action], 1)
-        else:
-            return torch.cat([state, action], 1)
 
     def forward(self, state, action):
-        # Warning: use sin-cos representation!
-        # z = F.relu(self.l1(torch.cat([state, action], 1)))
-        z = F.relu(self.l1(self._state_embedding(state, action)))
+        z = F.relu(self.l1(torch.cat([self.emb_func(state), action], dim=1)))
         z = F.relu(self.l2(z))
         z = F.sigmoid(self.l3(z))
         return z
@@ -68,21 +31,21 @@ class Z_Func(nn.Module):
     def save(self, path):
         torch.save(self.state_dict(), path)
 
-    def load(self, path, device="cpu"):
-        self.to(device)
+    def load(self, path):
         self.load_state_dict(
-            torch.load(path, map_location=torch.device(device))
+            torch.load(path, map_location=self.device)
         ) 
 
 
 class RFZI_NN(Agent):
-    def __init__(self, env, device, 
-                 z_func_lr=1e-3, gamma=0.99, beta=0.01, tau=0.005, ):
+    def __init__(self, env, device, beta=0.01, gamma=0.95, tau=0.5, lr=1.0,
+                 emb_func=None, dim_emb=None, dim_hidden=None):
         # Environment information.
         self.env            = env
 
         self.dim_state      = env.dim_state
         self.dim_action     = env.dim_action
+        self.dim_hidden     = dim_hidden
         self.num_actions    = env.num_actions
         self.actions        = env.actions
 
@@ -95,20 +58,29 @@ class RFZI_NN(Agent):
         else:
             self.reward     = env.reward
         
-        self.beta           = beta
-        self.gamma          = gamma
+        self.beta   = beta
+        self.gamma  = gamma
         
         # Learning parameters.
-        self.z_func_lr  = z_func_lr
-        self.tau        = tau
-        self.eps        = 1e-7
+        self.lr     = lr
+        self.tau    = tau
+        self.eps    = 1e-7
         
-        # Internal states.
+        # Z network.
         self.device = device
-        self.z_func_current = Z_Func(self.dim_state, self.dim_action, self.env, self.device).to(device)
+        if emb_func is None:
+            emb_func = lambda x: x
+            dim_emb  = self.dim_state
+        else:
+            assert dim_emb == emb_func(torch.zeros(size=(self.dim_state,))).shape[1]
+        assert len(dim_hidden) == 2
+
+        self.z_func_current = Z_Func(
+            dim_action=self.dim_action, dim_hidden=self.dim_hidden, 
+            emb_func=emb_func, dim_emb=dim_emb, device=self.device
+        ).to(self.device)
         self.z_func_optimizer = torch.optim.SGD(
-            self.z_func_current.parameters(),
-            lr=z_func_lr
+            self.z_func_current.parameters(), lr=lr
         )
         self.reset()
         
@@ -149,9 +121,9 @@ class RFZI_NN(Agent):
                 target_Z = torch.exp(-self.gamma*target_Z)
                 
                 # Warning: clipping for CartPole.
-                if isinstance(self.env, CartPole):
+                """if isinstance(self.env, CartPole):
                     target_Z[states[:,0] > self.env.x_threshold] = 1
-                    target_Z[states[:,2] > self.env.theta_threshold_radians] = 1
+                    target_Z[states[:,2] > self.env.theta_threshold_radians] = 1"""
 
             current_Z = self.z_func_current(states, actions).flatten()
             z_func_loss = F.mse_loss(current_Z, target_Z)
