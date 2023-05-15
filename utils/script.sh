@@ -10,7 +10,7 @@ python ./NN_train.py --env Toy-1000 --beta 0.01 --tau 1.0 --dim_emb 300 --num_tr
 
 # CartPole.
 python ./NN_train.py --env CartPole --beta 0.01 --tau 1.0 --dim_emb 6 --num_train 2000 --batch_size 10000
-python ./NN_online_train.py --env CartPole --beta 0.01 --tau 1.0 --dim_emb 6 --T_train 100000 --batch_size 10000 --freq_update 20 --eps 0.01 --buffer_size 1000000 --off_ratio 0.1 --seed 20
+python ./NN_online_train.py --env CartPole --beta 0.01 --tau 1.0 --sigma 0.1 --dim_emb 6 --T_train 100000 --batch_size 10000 --freq_update 20 --eps 0.01 --buffer_size 1000000 --off_ratio 0.1 --seed 20
 
 # Pendulum.
 python ./NN_train.py --env Pendulum --beta 0.01 --tau 1.0 --num_actions 2 --dim_emb 3 --num_train 2000 --batch_size 10000

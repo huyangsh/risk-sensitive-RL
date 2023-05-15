@@ -90,7 +90,7 @@ logger.log(f"> Using Pytorch on device {device} ({args.device} requested).")
 data_path, is_tabular = args.data_path, False
 if args.env == "CartPole":
     env = CartPole(sigma=args.sigma)
-    if args.data_path is None: data_path = f"./data/CartPole/CartPole_random.pkl"
+    if args.data_path is None: data_path = f"./data/CartPole/CartPole_0.01_random.pkl"
     
     def emb_func(state):
         return torch.cat([state, torch.sin(state[:,2][:,None]), torch.cos(state[:,2][:,None])], 1)

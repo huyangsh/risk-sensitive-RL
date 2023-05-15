@@ -59,7 +59,7 @@ class CartPole(Env):
         195.0 over 100 consecutive trials.
     """
 
-    def __init__(self, sigma=0.0):
+    def __init__(self, sigma=0.0, T_max=0):
         self.gravity         = 9.8
         self.masscart        = 1.0
         self.masspole        = 0.1
@@ -99,6 +99,9 @@ class CartPole(Env):
         # Internal states.
         self.state = None
         self.steps_beyond_done = None
+        
+        self.t     = 0
+        self.T_max = T_max
 
 
     def step(self, action):
@@ -141,6 +144,11 @@ class CartPole(Env):
             or theta > self.theta_threshold_radians
         )
 
+        # upper bound on episode length
+        self.t += 1
+        if self.T_max > 0 and self.t >= self.T_max:
+            done = True
+
         if not done:
             reward = 1.0
         elif self.steps_beyond_done is None:
@@ -165,6 +173,9 @@ class CartPole(Env):
         # set seed if any
         if seed is not None:
             np.random.seed(seed)
+        
+        # upper bound on episode length
+        self.t = 0
 
         # perturbing the environment
         self.gravity         = gravity

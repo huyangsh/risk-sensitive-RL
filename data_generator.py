@@ -11,10 +11,11 @@ from env import RMDP, CartPole, Pendulum, build_toy_10_env, build_toy_100_env, b
 from data import Dataset, TorchDataset
 
 
-env_name = "RMDP"
+env_name = "CartPole"
 alg_name = "random"
+SIGMA = 0.01
 alg_path = "./data/expert_alg/Pendulum_SAC.zip"
-data_path = f"./data/{env_name}/{env_name}_{alg_name}.pkl"
+data_path = f"./data/{env_name}/{env_name}_{SIGMA}_{alg_name}.pkl"
 SIZE = int(1e6)
 DRL_algs = {"PPO": PPO, "SAC": SAC, "DQN": DQN, "TD3": TD3}
 DRL_envs = {"CartPole": CartPole, "Pendulum": Pendulum}
@@ -80,7 +81,7 @@ elif env_name == "RMDP_torch":
     dataset.finish()
     dataset.save("./data/Toy/toy_torch_random.pkl")
 elif env_name in ["CartPole", "Pendulum"]:
-    env = DRL_envs[env_name]()
+    env = DRL_envs[env_name](sigma=SIGMA)
     print(f"Successfully build {env_name}.")
     
     if alg_name == "random":
