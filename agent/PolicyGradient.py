@@ -50,7 +50,7 @@ class PolicyGradientAgent(Agent):
         return self.pi, {"loss": loss, "V_pi": V_pi, "Q_pi": Q_pi}
 
     def select_action(self, state):
-        return random.choices(self.actions, weights=self.pi[state,:])[0]
+        return random.choices(self.actions, weights=self.pi[int(state),:])[0]
     
     def save(self, path):
         np.save(path, self.pi)
