@@ -6,7 +6,7 @@ python ./NN_train.py --env Toy-100 --beta 0.01 --tau 1.0 --dim_emb 100 --num_tra
 
 # Toy-1000
 # Warning: evaluation is very slow.
-python ./NN_train.py --env Toy-1000 --beta 0.01 --tau 1.0 --dim_emb 300 --num_train 10000 --freq_eval 2000 --thres_eval 0.01 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy
+python ./NN_train.py --env Toy-1000 --beta 0.01 --tau 1.0 --dim_emb 2000 --num_train 5000 --freq_eval 50 --thres_eval 0.01 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy
 
 # CartPole.
 python ./NN_train.py --env CartPole --beta 0.01 --tau 1.0 --dim_emb 6 --num_train 2000 --batch_size 10000

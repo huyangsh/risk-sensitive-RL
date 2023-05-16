@@ -227,5 +227,5 @@ class RFZI_NN(Agent):
         return pi
 
     def calc_policy_reward(self):
-        V = self.env.DP_pi(self.calc_pi(), 1e-5)
+        V = self.env.DP_pi(self.calc_pi(), self.env.thres)
         return np.sum(V*self.env.distr_init)
