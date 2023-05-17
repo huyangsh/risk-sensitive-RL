@@ -95,6 +95,7 @@ if args.env == "CartPole":
     def emb_func(state):
         return torch.cat([state, torch.sin(state[:,2][:,None]), torch.cos(state[:,2][:,None])], 1)
     dim_emb = env.dim_state + 2
+    dim_hidden = (256*env.dim_state, 32)
     assert dim_emb == len(emb_func(torch.zeros(size=(1,env.dim_state))).flatten())
 
     logger.log(f"> Setting up CartPole with Gausian noise (sigma = {args.sigma:.4f}).")
@@ -106,6 +107,7 @@ elif args.env == "Pendulum":
     def emb_func(state):
         return state
     dim_emb = env.dim_state 
+    dim_hidden = (256*env.dim_state, 32)
     assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
 
     logger.log(f"> Setting up Pendulum with Gausian noise (sigma = {args.sigma:.4f}).")
@@ -123,6 +125,7 @@ elif args.env == "Toy-10":
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
+    dim_hidden = (256*env.dim_state, 32)
     assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
 
     logger.log(f"> Setting up Toy-10 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
@@ -140,6 +143,7 @@ elif args.env == "Toy-100":
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
+    dim_hidden = (256*env.dim_state, 32)
     assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
 
     logger.log(f"> Setting up Toy-100 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
@@ -157,6 +161,7 @@ elif args.env == "Toy-1000":
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
+    dim_hidden = (2048*env.dim_state, 128)  # In older results this is the same as above.
     assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
     
     logger.log(f"> Setting up Toy-1000 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
@@ -184,7 +189,7 @@ agent = RFZI_NN(
     beta=args.beta, gamma=args.gamma, 
     lr=args.lr, tau=args.tau,
     emb_func=emb_func, dim_emb=dim_emb,
-    dim_hidden=(256*env.dim_state, 32)
+    dim_hidden=dim_hidden
 )
 logger.log(f"> Setting up agent: beta = {args.beta}, gamma = {args.gamma}, lr = {args.lr}, tau = {args.tau}.\n\n")
 if args.freq_save > 0:

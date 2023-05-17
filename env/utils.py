@@ -5,7 +5,7 @@ from . import RMDP
 # Define reward_src vectors.
 reward_src_10 = np.array([0,-10,5,-10,0,1,1,0,0,0,-1,2,-1,0])
 
-reward_src_100 = np.array([sin(i*pi/100) + cos(2*i*pi/100) + sin(3*i*pi/100) for i in range(100)])
+# reward_src_100 = np.array([sin(i*pi/100) + cos(2*i*pi/100) + sin(3*i*pi/100) for i in range(100)])
 """ reward_src_100 = np.array([
     0,-10,5,-10,0,1,1,0,-1,2,-1,0,-1,-1,0,
     0,5,-10,5,0,1,1,0,1,-2,1,0,-1,-1,0,
@@ -15,7 +15,7 @@ reward_src_100 = np.array([sin(i*pi/100) + cos(2*i*pi/100) + sin(3*i*pi/100) for
     0,5,-10,5,0,1,1,0,1,-2,1,0,-1,-1,0,
     0,-10,5,-10,0,0,5,-10,5,0
 ]) """
-"""reward_src_100 = np.array([
+reward_src_100 = np.array([
     0,-10,5,-10,0,1,3,0,-1,4,-1,0,-1,-1,0,
     0,3,-8,3,0,1,2,0,1,-4,1,0,-1,-2,0,
     0,-12,6,-10,0,4,1,0,-2,3,-1,0,-2,-1,0,
@@ -23,7 +23,7 @@ reward_src_100 = np.array([sin(i*pi/100) + cos(2*i*pi/100) + sin(3*i*pi/100) for
     0,-4,2,-8,0,3,1,0,-2,4,-5,0,-2,-1,0,
     0,3,-6,1,0,1,2,0,1,-6,1,0,-1,-4,0,
     0,-7,3,-7,0,0,2,-6,4,0
-])"""
+])
 
 reward_src_1000 = np.array([sin(i*pi/1000) + cos(2*i*pi/1000) + sin(3*i*pi/1000) for i in range(1000)])
 

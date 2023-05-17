@@ -66,6 +66,7 @@ if settings.env == "CartPole":
     def emb_func(state):
         return torch.cat([state, torch.sin(state[:,2][:,None]), torch.cos(state[:,2][:,None])], 1)
     dim_emb = env.dim_state + 2
+    dim_hidden = (256*env.dim_state, 32)
 
     print(f"> Setting up CartPole with Gausian noise (sigma = {settings.sigma:.4f}).")
 elif settings.env == "Pendulum":
@@ -73,7 +74,8 @@ elif settings.env == "Pendulum":
     
     def emb_func(state):
         return state
-    dim_emb = env.dim_state 
+    dim_emb = env.dim_state
+    dim_hidden = (256*env.dim_state, 32)
 
     print(f"> Setting up Pendulum with Gausian noise (sigma = {settings.sigma:.4f}).")
     print(f"  + Action space contains {args.num_actions} actions: {env.actions}")
@@ -88,6 +90,7 @@ elif settings.env == "Toy-10":
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * settings.dim_emb
+    dim_hidden = (256*env.dim_state, 32)
 
     print(f"> Setting up Toy-10 with stochastic transition (p_perturb = {settings.p_perturb:.4f}).")
 elif settings.env == "Toy-100":
@@ -101,6 +104,7 @@ elif settings.env == "Toy-100":
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * settings.dim_emb
+    dim_hidden = (256*env.dim_state, 32)
 
     print(f"> Setting up Toy-100 with stochastic transition (p_perturb = {settings.p_perturb:.4f}).")
 elif settings.env == "Toy-1000":
@@ -114,6 +118,7 @@ elif settings.env == "Toy-1000":
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * settings.dim_emb
+    dim_hidden = (2048*env.dim_state, 128)
     
     print(f"> Setting up Toy-1000 with stochastic transition (p_perturb = {settings.p_perturb:.4f}).")
 else:
@@ -134,7 +139,7 @@ agent = RFZI_NN(
     beta=settings.beta, gamma=settings.gamma, 
     lr=0, tau=0,
     emb_func=emb_func, dim_emb=dim_emb,
-    dim_hidden=(256*env.dim_state, 32)
+    dim_hidden=dim_hidden
 )
 print(f"> Setting up agent: beta = {settings.beta}, gamma = {settings.gamma}.")
 
