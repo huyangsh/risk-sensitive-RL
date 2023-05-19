@@ -3,7 +3,7 @@ from math import sin, cos, pi
 from . import RMDP
 
 # Define reward_src vectors.
-reward_src_10 = np.array([0,-10,5,-10,0,1,1,0,0,0,-1,2,-1,0])
+reward_src_10 = np.array([0,0,-1,2,-1,0,0,-10,5,-10,0,0.9,1,0])
 
 # reward_src_100 = np.array([sin(i*pi/100) + cos(2*i*pi/100) + sin(3*i*pi/100) for i in range(100)])
 """ reward_src_100 = np.array([

@@ -58,13 +58,16 @@ class RMDP(Env):
             V = np.zeros(shape=(self.num_states,), dtype=np.float64)
 
             for s in self.states:
-                reward_max = 0
+                reward_max = None
                 for a in self.actions:
                     V_pi_cum = 0
                     for s_ in self.states:
                         V_pi_cum += self.prob[s,a,s_] * exp(-self.beta * V_prev[s_])
 
-                    reward_max = max(reward_max, self.reward[s,a] - self.coeff * log(V_pi_cum))
+                    if reward_max is None:
+                        reward_max = self.reward[s,a] - self.coeff * log(V_pi_cum)
+                    else:
+                        reward_max = max(reward_max, self.reward[s,a] - self.coeff * log(V_pi_cum))
                 
                 V[s] = reward_max
             

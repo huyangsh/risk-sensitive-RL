@@ -34,3 +34,14 @@ def print_float_list(lst, fmt=".4g"):
         msg += "{:{fmt}}".format(x, fmt=fmt) + ", "
     msg = msg[:-2] + "]"
     return msg
+
+def print_float_matrix(mat, fmt=".4f"):
+    x, y = mat.shape
+
+    msg = ""
+    for i in range(x):
+        for j in range(y):
+            msg += "{:{fmt}}".format(mat[i,j], fmt=fmt).rjust(10)
+        msg += "\n"
+    msg = msg[:-1]
+    return msg
