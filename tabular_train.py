@@ -4,7 +4,7 @@ from copy import deepcopy
 from math import exp, log
 import matplotlib.pyplot as plt
 
-from env import RMDP, build_toy_10_env, build_toy_100_env
+from env import RMDP, get_reward_src, build_toy_env
 from data import Dataset
 from agent import RFZI_Tabular
 
@@ -18,7 +18,10 @@ np.random.seed(seed)
 p_perturb = 0.15
 beta  = 0.01
 gamma = 0.95
-env = build_toy_100_env(p_perturb, beta, gamma, THRES)
+
+env_name = "Toy-100_design"
+reward_src = get_reward_src(env_name)
+env = build_toy_env(p_perturb, beta, gamma, THRES)
 
 # Load data.
 # dataset = np.load("./data/Toy/toy_large_random.npy")

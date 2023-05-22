@@ -11,8 +11,7 @@ import random
 
 from data import TorchBuffer
 from env import CartPole, Pendulum
-from env import build_toy_10_env, build_toy_100_env, build_toy_1000_env
-from env import reward_src_10, reward_src_100, reward_src_1000
+from env import get_reward_src, build_toy_env
 from agent import RFZI_NN
 from utils import Logger, print_float_list
 
@@ -117,57 +116,32 @@ elif args.env == "Pendulum":
     logger.log(f"> Setting up Pendulum with Gausian noise (sigma = {args.sigma:.4f}).")
     logger.log(f"  + Action space contains {args.num_actions} actions: {env_train.actions}")
     logger.log(f"  + Using data from path <{data_path}>.")
-elif args.env == "Toy-10":
+elif args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
     is_tabular = True
-    env_train = build_toy_10_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
-    if args.data_path is None: data_path = f"./data/Toy/Toy-10_torch_random.pkl"
 
-    mat = torch.FloatTensor(np.arange(env_train.num_states)[:, None])
+    reward_src = get_reward_src(args.env)
+    env = build_toy_env(reward_src, args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
+    
+    pos = args.env.find("_")
+    if pos >= 0:
+        env_basename = args.env[:pos]
+    else:
+        env_basename = args.env
+    if args.data_path is None: data_path = f"./data/Toy/{env_basename}_torch_random.pkl"
+
+    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env_train.num_states)
+    mat = mat * (2*torch.pi/env.num_states)
     embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
     def emb_func(state):
         return embedding[state.long().flatten()]
     dim_emb = 2 * args.dim_emb
-    assert dim_emb == len(emb_func(torch.zeros(size=(env_train.dim_state,))).flatten())
+    dim_hidden = (256*env.dim_state, 32)
+    assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
 
     logger.log(f"> Setting up Toy-10 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
-    logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_10)}>.")
+    logger.log(f"  + Using reward_src vector <{print_float_list(reward_src)}>.")
     logger.log(f"  + Using data from path <{data_path}>.")
-elif args.env == "Toy-100":
-    is_tabular = True
-    env_train = build_toy_100_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
-    if args.data_path is None: data_path = f"./data/Toy/Toy-100_torch_random.pkl"
-
-    mat = torch.FloatTensor(np.arange(env_train.num_states)[:, None])
-    mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env_train.num_states)
-    embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
-    def emb_func(state):
-        return embedding[state.long().flatten()]
-    dim_emb = 2 * args.dim_emb
-    assert dim_emb == len(emb_func(torch.zeros(size=(env_train.dim_state,))).flatten())
-
-    logger.log(f"> Setting up Toy-100 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
-    logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_100)}>.")
-    logger.log(f"  + Using data from path <{data_path}>.")
-elif args.env == "Toy-1000":
-    is_tabular = True
-    env_train = build_toy_1000_env(args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
-    if args.data_path is None: data_path = f"./data/Toy/Toy-1000_torch_random.pkl"
-
-    mat = torch.FloatTensor(np.arange(env_train.num_states)[:, None])
-    mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env_train.num_states)
-    embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
-    def emb_func(state):
-        return embedding[state.long().flatten()]
-    dim_emb = 2 * args.dim_emb
-    assert dim_emb == len(emb_func(torch.zeros(size=(env_train.dim_state,))).flatten())
-    
-    logger.log(f"> Setting up Toy-1000 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
-    logger.log(f"  + Using reward_src vector <{print_float_list(reward_src_1000)}>.")
-    logger.log(f"  + Using data from path <{data_path}>...")
 else:
     raise NotImplementedError
 

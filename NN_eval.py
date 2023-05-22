@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import random
 
-from env import CartPole, Pendulum, build_toy_10_env, build_toy_100_env, build_toy_1000_env
+from env import CartPole, Pendulum, get_reward_src, build_toy_env
 from agent import RFZI_NN
 from utils import print_float_list
 
@@ -79,48 +79,30 @@ elif settings.env == "Pendulum":
 
     print(f"> Setting up Pendulum with Gausian noise (sigma = {settings.sigma:.4f}).")
     print(f"  + Action space contains {args.num_actions} actions: {env.actions}")
-elif settings.env == "Toy-10":
+elif args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
     is_tabular = True
-    env = build_toy_10_env(settings.p_perturb, settings.beta, settings.gamma, args.thres_eval, args.disp_V_opt)
 
-    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
-    mat = mat * torch.FloatTensor(np.arange(1, settings.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env.num_states)
-    embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
-    def emb_func(state):
-        return embedding[state.long().flatten()]
-    dim_emb = 2 * settings.dim_emb
-    dim_hidden = (256*env.dim_state, 32)
-
-    print(f"> Setting up Toy-10 with stochastic transition (p_perturb = {settings.p_perturb:.4f}).")
-elif settings.env == "Toy-100":
-    is_tabular = True
-    env = build_toy_100_env(settings.p_perturb, settings.beta, settings.gamma, args.thres_eval, args.disp_V_opt)
-
-    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
-    mat = mat * torch.FloatTensor(np.arange(1, settings.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env.num_states)
-    embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
-    def emb_func(state):
-        return embedding[state.long().flatten()]
-    dim_emb = 2 * settings.dim_emb
-    dim_hidden = (256*env.dim_state, 32)
-
-    print(f"> Setting up Toy-100 with stochastic transition (p_perturb = {settings.p_perturb:.4f}).")
-elif settings.env == "Toy-1000":
-    is_tabular = True
-    env = build_toy_1000_env(settings.p_perturb, settings.beta, settings.gamma, args.thres_eval, args.disp_V_opt)
-
-    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
-    mat = mat * torch.FloatTensor(np.arange(1, settings.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env.num_states)
-    embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
-    def emb_func(state):
-        return embedding[state.long().flatten()]
-    dim_emb = 2 * settings.dim_emb
-    dim_hidden = (2048*env.dim_state, 128)
+    reward_src = get_reward_src(args.env)
+    env = build_toy_env(reward_src, args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
     
-    print(f"> Setting up Toy-1000 with stochastic transition (p_perturb = {settings.p_perturb:.4f}).")
+    pos = args.env.find("_")
+    if pos >= 0:
+        env_basename = args.env[:pos]
+    else:
+        env_basename = args.env
+    if args.data_path is None: data_path = f"./data/Toy/{env_basename}_torch_random.pkl"
+
+    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
+    mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
+    mat = mat * (2*torch.pi/env.num_states)
+    embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
+    def emb_func(state):
+        return embedding[state.long().flatten()]
+    dim_emb = 2 * args.dim_emb
+    dim_hidden = (256*env.dim_state, 32)
+    assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
+
+    print(f"> Setting up Toy-10 with stochastic transition (p_perturb = {args.p_perturb:.4f}).")
 else:
     raise NotImplementedError
 

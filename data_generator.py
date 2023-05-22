@@ -7,7 +7,7 @@ import argparse
 import random
 
 
-from env import RMDP, CartPole, Pendulum, build_toy_10_env, build_toy_100_env, build_toy_1000_env
+from env import RMDP, CartPole, Pendulum, get_reward_src, build_toy_env
 from data import Dataset, TorchDataset
 
 
@@ -32,11 +32,13 @@ parser.add_argument("--gendata_pol", default="ppo", type=str)
 args = parser.parse_args()
 
 
-if env_name == "RMDP":
+if env_name in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
-    env = build_toy_1000_env(p_perturb, beta, gamma)
+
+    reward_src = get_reward_src(env_name)
+    env = build_toy_env(reward_src, p_perturb, beta, gamma)
 
     if alg_name == "random":
         policy = lambda x: random.choice(env.actions)
@@ -52,11 +54,13 @@ if env_name == "RMDP":
     dataset = Dataset()
     dataset.store(trajectory)
     dataset.save("./data/Toy/toy_1000_random.npy")
-elif env_name == "RMDP_torch":
+elif env_name in ["Toy-10_torch", "Toy-100_design_torch", "Toy-100_Fourier_torch", "Toy-1000_torch"]:
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
-    env = build_toy_100_env(p_perturb, beta, gamma)
+    
+    reward_src = get_reward_src(env_name)
+    env = build_toy_env(reward_src, p_perturb, beta, gamma)
 
     if alg_name == "random":
         policy = lambda x: random.choice(env.actions)

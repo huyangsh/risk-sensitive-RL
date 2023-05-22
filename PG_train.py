@@ -8,7 +8,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 from agent import PolicyGradientAgent
-from env import RMDP, build_toy_10_env, build_toy_100_env
+from env import RMDP, get_reward_src, build_toy_env
 from utils import print_float_list, print_float_matrix
 
 
@@ -24,8 +24,11 @@ torch.manual_seed(seed)
 p_perturb = 0.01
 beta  = 3.0
 gamma = 0.95
-env = build_toy_10_env(p_perturb, beta, gamma, THRES)
+
 env_name = "Toy-10"
+reward_src = get_reward_src(env_name)
+env = build_toy_env(reward_src,p_perturb, beta, gamma, THRES)
+
 print("beta", beta, "p_perturb", p_perturb)
 print(f"pi_opt = {env.V_to_Q(env.V_opt).argmax(axis=1).flatten().tolist()}.")
 
