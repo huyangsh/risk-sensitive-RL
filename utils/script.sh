@@ -2,8 +2,12 @@
 python ./NN_train.py --env Toy-10 --beta 0.01 --tau 1.0 --dim_emb 8 --num_train 2000 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy
 
 # Toy-100
-python ./NN_train.py --env Toy-100 --beta 0.01 --tau 1.0 --dim_emb 100 --num_train 2000 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy
-python ./NN_train.py --env Toy-100 --beta 0.05 --tau 1.0 --lr 0.1 --dim_emb 100 --num_train 2000 --num_batches 50 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy
+python ./NN_train.py --env Toy-100_design --beta 0.01 --tau 1.0 --dim_emb 100 --num_train 2000 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy
+python ./NN_train.py --env Toy-100_design --beta 0.05 --tau 1.0 --lr 0.1 --dim_emb 100 --num_train 2000 --num_batches 50 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy
+
+python ./NN_train.py --env Toy-100_zone --beta 0.01 --tau 1.0 --lr 0.5 --dim_emb 100 --num_train 2000 --num_batches 50 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy --seed
+python ./NN_train.py --env Toy-100_zone --beta 0.1 --tau 1.0 --lr 0.5 --dim_emb 100 --num_train 2000 --num_batches 50 --batch_size 10000 --disp_V_opt --disp_V_pi --disp_policy --seed
+python ./NN_train.py --env Toy-100_zone --beta 0.5 --tau 1.0 --lr 0.2 --dim_emb 100 --num_train 2000 --num_batches 100 --batch_size 50000 --disp_V_opt --disp_V_pi --disp_policy --seed
 
 # Toy-1000
 # Warning: evaluation is very slow.

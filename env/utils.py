@@ -27,6 +27,10 @@ def get_reward_src(env_name):
         ]) """
     elif env_name == "Toy-100_Fourier":
         return np.array([sin(i*pi/100) + cos(2*i*pi/100) + sin(3*i*pi/100) for i in range(100)])
+    elif env_name == "Toy-100_zone":
+        return np.array( [3*np.sin(i*np.pi/2.05) for i in range(50)] + [np.sin(i*np.pi/50) for i in range(50)] )
+    elif env_name == "Toy-100_zone2":
+        return np.array( [4*np.sin(i*np.pi/2.05)-1 for i in range(50)] + [np.sin(i*np.pi/50) for i in range(50)] )
     elif env_name == "Toy-1000":
         return np.array([sin(i*pi/1000) + cos(2*i*pi/1000) + sin(3*i*pi/1000) for i in range(1000)])
     else:

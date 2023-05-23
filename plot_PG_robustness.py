@@ -20,6 +20,7 @@ parser.add_argument("--beta", default=0.01, type=float)
 parser.add_argument("--gamma", default=0.95, type=float)
 parser.add_argument("--p_perturb", default=0.15, type=float)
 parser.add_argument("--sigma", default=0.0, type=float)
+parser.add_argument("--dim_emb", default=10, type=int)
 parser.add_argument("--thres_eval", default=1e-5, type=float)
 
 args = parser.parse_args()
@@ -40,7 +41,7 @@ else:
 if args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
     is_tabular = True
     reward_src = get_reward_src(args.env)
-    print(reward_src)
+    print(args.p_perturb, reward_src)
     env = build_toy_env(reward_src, args.p_perturb, args.beta, args.gamma, args.thres_eval, True)
     
     pos = args.env.find("_")
@@ -60,7 +61,8 @@ if args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
     dim_hidden = (256*env.dim_state, 32)
     assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
 
-delta_list = np.arange(0, 0.31, 0.01)
+# delta_list = np.arange(0, 0.31, 0.01)  # p_perturb = 0.15
+delta_list = np.arange(0, 0.61, 0.02)  # p_perturb = 0.01
 
 
 def DP_opt_std(env, thres=1e-5):
@@ -108,9 +110,10 @@ def policy_eval_robust(env, reward_src, p_perturb, T, pi, delta):
     for t in range(T-2, -1, -1):
         for s in range(env.num_states):
             a = pi[s]
-            s_r = (s+a) % env.num_states
             s_l = (s+a-2) % env.num_states
             s_p = (s+a-1) % env.num_states
+            s_r = (s+a) % env.num_states
+            
             V_next = np.array([V_robust[t+1, s_l], V_robust[t+1, s_p], V_robust[t+1, s_r]])
             mu_0 = np.array([p_perturb, 1-2*p_perturb, p_perturb])
 
@@ -128,26 +131,41 @@ def policy_eval_robust(env, reward_src, p_perturb, T, pi, delta):
 
 pi_std = list(V_to_Q(env, DP_opt_std(env)).argmax(axis=1))
 print(pi_std)
-pi = [0, 0, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0, 0, 0]
 
-reward_std, reward_pi = [], []
+pis = [ [2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2, 2, 2, 2],
+        [0, 0, 2, 1, 0, 0, 0, 0, 1, 2, 2, 2, 1, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 1, 2, 2, 2, 1, 0] ]
+labels = [r"policy gradient ($\beta = 1.0$)", r"policy gradient ($\beta = 2.0$)", r"policy gradient ($\beta = 3.0$)"]
+tag = "0.01"
+"""
+pis = [ [2, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2, 2, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 1, 0] ]
+labels = [r"policy gradient ($\beta = 0.1$)", r"policy gradient ($\beta = 1.0$)"]
+tag = "0.15"
+"""
+
+
+reward_std, reward_pis = [], []
 for delta in delta_list:
     r_s = policy_eval_robust(env, reward_src, args.p_perturb, 20, pi_std, delta=delta)
-    r_pi = policy_eval_robust(env, reward_src, args.p_perturb, 20, pi, delta=delta)
-    
-    print(delta, r_s, r_pi)
+
+    r_pis = []
+    for pi in pis:
+        r_pis.append(policy_eval_robust(env, reward_src, args.p_perturb, 20, pi, delta=delta))
+
+    print(delta, r_s, r_pis)
     reward_std.append(r_s)
-    reward_pi.append(pi)
+    reward_pis.append(r_pis)
 
-with open(f"./plot/PG_{args.env}_robust_{args.mode}.pkl" ,"wb") as f:
-    pkl.dump([reward_pi, reward_std], f)
+with open(f"./plot/PG_{tag}_{args.env}_robust_{args.mode}.pkl" ,"wb") as f:
+    pkl.dump([reward_pis, reward_std], f)
 
-reward_pi = np.array(reward_pi)
+reward_pis = np.array(reward_pis)
 reward_std = np.array(reward_std)
 
 plt.plot(delta_list, reward_std, label="classical")
-plt.plot(delta_list, reward_pi, label="PG")
+plt.plot(delta_list, reward_pis, label=labels)
 plt.xlabel(r"$\delta$")
 plt.ylabel(r"$\hat{V}_{\pi}(\delta)$")
 plt.legend()
-plt.savefig(f"./plot/PG_{args.env}_robust_{args.mode}.png", dpi=200)
+plt.savefig(f"./plot/PG_{tag}_{args.env}_robust_{args.mode}.png", dpi=200)

@@ -11,7 +11,7 @@ from env import RMDP, CartPole, Pendulum, get_reward_src, build_toy_env
 from data import Dataset, TorchDataset
 
 
-env_name = "CartPole"
+env_name = "Toy-100_zone2_torch"
 alg_name = "random"
 SIGMA = 0.01
 alg_path = "./data/expert_alg/Pendulum_SAC.zip"
@@ -26,13 +26,13 @@ parser.add_argument("--env", default="CartPole-v1")
 # e-mix (prob. to mix random actions)
 parser.add_argument("--eps", default=1.0, type=float)
 parser.add_argument("--buffer_size", default=1e6, type=float)
-parser.add_argument("--verbose", default="False", type=str)
+parser.add_argument("--verbose", default=False, type=bool)
 parser.add_argument("--device", default="cpu", type=str)
 parser.add_argument("--gendata_pol", default="ppo", type=str)
 args = parser.parse_args()
 
 
-if env_name in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
+if env_name in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-1000"]:
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
@@ -53,13 +53,13 @@ if env_name in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
 
     dataset = Dataset()
     dataset.store(trajectory)
-    dataset.save("./data/Toy/toy_1000_random.npy")
-elif env_name in ["Toy-10_torch", "Toy-100_design_torch", "Toy-100_Fourier_torch", "Toy-1000_torch"]:
+    dataset.save(f"./data/Toy/{env_name}_random.npy")
+elif env_name in ["Toy-10_torch", "Toy-100_design_torch", "Toy-100_Fourier_torch", "Toy-100_zone_torch", "Toy-100_zone2_torch", "Toy-1000_torch"]:
     p_perturb = 0.15
     beta  = 0.01
     gamma = 0.95
     
-    reward_src = get_reward_src(env_name)
+    reward_src = get_reward_src(env_name[:-6])
     env = build_toy_env(reward_src, p_perturb, beta, gamma)
 
     if alg_name == "random":
@@ -83,7 +83,7 @@ elif env_name in ["Toy-10_torch", "Toy-100_design_torch", "Toy-100_Fourier_torch
             print(f"sample data #{i}: {data}.")
     
     dataset.finish()
-    dataset.save("./data/Toy/toy_torch_random.pkl")
+    dataset.save(f"./data/Toy/{env_name}_random.pkl")
 elif env_name in ["CartPole", "Pendulum"]:
     env = DRL_envs[env_name](sigma=SIGMA)
     print(f"Successfully build {env_name}.")

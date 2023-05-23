@@ -86,11 +86,7 @@ elif args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
     env = build_toy_env(reward_src, args.p_perturb, args.beta, args.gamma, args.thres_eval, args.disp_V_opt)
     
     pos = args.env.find("_")
-    if pos >= 0:
-        env_basename = args.env[:pos]
-    else:
-        env_basename = args.env
-    if args.data_path is None: data_path = f"./data/Toy/{env_basename}_torch_random.pkl"
+    if args.data_path is None: data_path = f"./data/Toy/{args.env}_torch_random.pkl"
 
     mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
