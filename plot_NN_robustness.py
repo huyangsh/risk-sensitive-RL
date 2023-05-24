@@ -5,19 +5,25 @@ from math import sin, cos, pi
 import argparse
 import pickle as pkl
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from agent import RFZI_NN
 from env import get_reward_src, build_toy_env
 
+
+T = 100
+print(T)
+
+
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--mode", default="cumulative", type=str, choices=["cumulative", "discounted"])
+parser.add_argument("--mode", default="discounted", type=str, choices=["cumulative", "discounted"])
 parser.add_argument("--seed", default=20, type=int)
 parser.add_argument("--device", default="cuda", type=str, choices=["cpu", "cuda"])
 
 parser.add_argument("--env", default="Toy-100_zone", type=str, choices=["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-1000"])
 parser.add_argument("--data_path", type=str)
-parser.add_argument("--beta", default=0.01, type=float)
+parser.add_argument("--beta", default=0.5, type=float)
 parser.add_argument("--gamma", default=0.95, type=float)
 parser.add_argument("--p_perturb", default=0.15, type=float)
 parser.add_argument("--sigma", default=0.0, type=float)
@@ -68,7 +74,7 @@ agent = agent = RFZI_NN(
     dim_hidden=dim_hidden
 )
 
-delta_list = np.arange(0, 0.31, 0.01)
+delta_list = np.arange(0.32, 0.51, 0.02)
 
 
 def DP_opt_std(env, thres=1e-5):
@@ -135,14 +141,18 @@ def policy_eval_robust(env, reward_src, p_perturb, T, pi, delta):
     return np.dot(env.distr_init, V_robust[0, :])
 
 pi_std = list(V_to_Q(env, DP_opt_std(env)).argmax(axis=1))
+pi_opt = list(env.V_to_Q(env.V_opt).argmax(axis=1))
 print(pi_std)
+print(pi_opt)
 
-reward_std = []
-for delta in delta_list:
-    r_s = policy_eval_robust(env, reward_src, args.p_perturb, 20, pi_std, delta=delta)
-    
-    print(delta, r_s)
+reward_std, reward_opt = [], []
+for delta in tqdm(delta_list):
+    r_s = policy_eval_robust(env, reward_src, args.p_perturb, T, pi_std, delta=delta)
+    r_o = policy_eval_robust(env, reward_src, args.p_perturb, T, pi_opt, delta=delta)
+
+    print(delta, r_s, r_o)
     reward_std.append(r_s)
+    reward_opt.append(r_o)
 
 prefix = f"./log/selected/{args.env}_{args.beta}/{args.env}_{args.beta}"
 seeds = [0, 10, 20, 30, 40]
@@ -157,26 +167,28 @@ for i in range(5):
         pi.append(agent.select_action(np.array([s])))
     print(pi)
 
-    for delta in delta_list:
-        r_a = policy_eval_robust(env, reward_src, args.p_perturb, 20, pi, delta=delta)
+    for delta in tqdm(delta_list):
+        r_a = policy_eval_robust(env, reward_src, args.p_perturb, T, pi, delta=delta)
 
         print(delta, r_a)
         reward_agent[i].append(r_a)
 print(reward_agent)
 
-with open(f"./plot/{args.env}_{args.beta}_robust_{args.mode}.pkl" ,"wb") as f:
-    pkl.dump([reward_agent, reward_std], f)
+with open(f"./plot/{args.env}_{args.beta}_robust_{T}.pkl" ,"wb") as f:
+    pkl.dump([reward_agent, reward_std, reward_opt], f)
 
 reward_agent = np.array(reward_agent)
 reward_agent_avg = reward_agent.mean(axis=0)
 reward_agent_std = reward_agent.std(axis=0)
 
 reward_std = np.array(reward_std)
+reward_opt = np.array(reward_opt)
 
 plt.plot(delta_list, reward_std, label="classical")
+plt.plot(delta_list, reward_opt, label="optimal")
 plt.plot(delta_list, reward_agent_avg, label="RFZI")
-plt.fill_between(delta_list, reward_agent_avg-reward_agent_std, reward_agent_avg+reward_agent_std, color="C1", alpha=0.1)
+plt.fill_between(delta_list, reward_agent_avg-reward_agent_std, reward_agent_avg+reward_agent_std, color="C2", alpha=0.1)
 plt.xlabel(r"$\delta$")
 plt.ylabel(r"$\hat{V}_{\pi}(\delta)$")
 plt.legend()
-plt.savefig(f"./plot/{args.env}_{args.beta}_robust_{args.mode}.png", dpi=200)
+plt.savefig(f"./plot/{args.env}_{args.beta}_robust_{T}.png", dpi=200)

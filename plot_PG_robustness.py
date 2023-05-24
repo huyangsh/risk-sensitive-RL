@@ -5,6 +5,7 @@ from math import sin, cos, pi
 import argparse
 import pickle as pkl
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from env import get_reward_src, build_toy_env
 
@@ -43,23 +44,6 @@ if args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
     reward_src = get_reward_src(args.env)
     print(args.p_perturb, reward_src)
     env = build_toy_env(reward_src, args.p_perturb, args.beta, args.gamma, args.thres_eval, True)
-    
-    pos = args.env.find("_")
-    if pos >= 0:
-        env_basename = args.env[:pos]
-    else:
-        env_basename = args.env
-    if args.data_path is None: data_path = f"./data/Toy/{env_basename}_torch_random.pkl"
-
-    mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
-    mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
-    mat = mat * (2*torch.pi/env.num_states)
-    embedding = torch.cat([torch.sin(mat), torch.cos(mat)], dim=1).to(device)
-    def emb_func(state):
-        return embedding[state.long().flatten()]
-    dim_emb = 2 * args.dim_emb
-    dim_hidden = (256*env.dim_state, 32)
-    assert dim_emb == len(emb_func(torch.zeros(size=(env.dim_state,))).flatten())
 
 # delta_list = np.arange(0, 0.31, 0.01)  # p_perturb = 0.15
 delta_list = np.arange(0, 0.61, 0.02)  # p_perturb = 0.01
@@ -145,13 +129,14 @@ tag = "0.15"
 """
 
 
+T = 500
 reward_std, reward_pis = [], []
-for delta in delta_list:
-    r_s = policy_eval_robust(env, reward_src, args.p_perturb, 20, pi_std, delta=delta)
+for delta in tqdm(delta_list):
+    r_s = policy_eval_robust(env, reward_src, args.p_perturb, T, pi_std, delta=delta)
 
     r_pis = []
     for pi in pis:
-        r_pis.append(policy_eval_robust(env, reward_src, args.p_perturb, 20, pi, delta=delta))
+        r_pis.append(policy_eval_robust(env, reward_src, args.p_perturb, T, pi, delta=delta))
 
     print(delta, r_s, r_pis)
     reward_std.append(r_s)
