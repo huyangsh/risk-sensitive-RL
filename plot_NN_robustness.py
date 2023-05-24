@@ -15,7 +15,7 @@ parser.add_argument("--mode", default="cumulative", type=str, choices=["cumulati
 parser.add_argument("--seed", default=20, type=int)
 parser.add_argument("--device", default="cuda", type=str, choices=["cpu", "cuda"])
 
-parser.add_argument("--env", default="Toy-100_design", type=str, choices=["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"])
+parser.add_argument("--env", default="Toy-100_zone", type=str, choices=["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-1000"])
 parser.add_argument("--data_path", type=str)
 parser.add_argument("--beta", default=0.01, type=float)
 parser.add_argument("--gamma", default=0.95, type=float)
@@ -43,18 +43,11 @@ elif args.mode == "discounted":
 else:
     raise NotImplementedError
 
-if args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-1000"]:
+if args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-1000"]:
     is_tabular = True
     reward_src = get_reward_src(args.env)
     print(reward_src)
     env = build_toy_env(reward_src, args.p_perturb, args.beta, args.gamma, args.thres_eval, True)
-    
-    pos = args.env.find("_")
-    if pos >= 0:
-        env_basename = args.env[:pos]
-    else:
-        env_basename = args.env
-    if args.data_path is None: data_path = f"./data/Toy/{env_basename}_torch_random.pkl"
 
     mat = torch.FloatTensor(np.arange(env.num_states)[:, None])
     mat = mat * torch.FloatTensor(np.arange(1, args.dim_emb+1))[None, :]
@@ -151,7 +144,7 @@ for delta in delta_list:
     print(delta, r_s)
     reward_std.append(r_s)
 
-prefix = f"./log/selected/{args.env}/{args.env}"
+prefix = f"./log/selected/{args.env}_{args.beta}/{args.env}_{args.beta}"
 seeds = [0, 10, 20, 30, 40]
 reward_agent = [[], [], [], [], []]
 
@@ -171,7 +164,7 @@ for i in range(5):
         reward_agent[i].append(r_a)
 print(reward_agent)
 
-with open(f"./plot/{args.env}_robust_{args.mode}.pkl" ,"wb") as f:
+with open(f"./plot/{args.env}_{args.beta}_robust_{args.mode}.pkl" ,"wb") as f:
     pkl.dump([reward_agent, reward_std], f)
 
 reward_agent = np.array(reward_agent)
@@ -186,4 +179,4 @@ plt.fill_between(delta_list, reward_agent_avg-reward_agent_std, reward_agent_avg
 plt.xlabel(r"$\delta$")
 plt.ylabel(r"$\hat{V}_{\pi}(\delta)$")
 plt.legend()
-plt.savefig(f"./plot/{args.env}_robust_{args.mode}.png", dpi=200)
+plt.savefig(f"./plot/{args.env}_{args.beta}_robust_{args.mode}.png", dpi=200)

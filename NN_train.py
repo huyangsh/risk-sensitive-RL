@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", default=20, type=int)
 parser.add_argument("--device", default="cuda", type=str, choices=["cpu", "cuda"])
 
-parser.add_argument("--env", type=str, choices=["CartPole", "Pendulum", "Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-1000"])
+parser.add_argument("--env", type=str, choices=["CartPole", "Pendulum", "Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-100_zone2", "Toy-1000"])
 parser.add_argument("--data_path", type=str)
 parser.add_argument("--beta", default=0.01, type=float)
 parser.add_argument("--gamma", default=0.95, type=float)
@@ -112,7 +112,7 @@ elif args.env == "Pendulum":
     logger.log(f"> Setting up Pendulum with Gausian noise (sigma = {args.sigma:.4f}).")
     logger.log(f"  + Action space contains {args.num_actions} actions: {env.actions}")
     logger.log(f"  + Using data from path <{data_path}>.")
-elif args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-1000"]:
+elif args.env in ["Toy-10", "Toy-100_design", "Toy-100_Fourier", "Toy-100_zone", "Toy-100_zone2", "Toy-1000"]:
     is_tabular = True
 
     reward_src = get_reward_src(args.env)

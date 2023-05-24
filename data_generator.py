@@ -11,7 +11,7 @@ from env import RMDP, CartPole, Pendulum, get_reward_src, build_toy_env
 from data import Dataset, TorchDataset
 
 
-env_name = "Toy-100_zone2_torch"
+env_name = "Toy-100_Fourier_torch"
 alg_name = "random"
 SIGMA = 0.01
 alg_path = "./data/expert_alg/Pendulum_SAC.zip"

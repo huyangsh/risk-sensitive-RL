@@ -10,7 +10,7 @@ from env import get_reward_src, build_toy_env
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--mode", default="cumulative", type=str, choices=["cumulative", "discounted"])
+parser.add_argument("--mode", default="discounted", type=str, choices=["cumulative", "discounted"])
 parser.add_argument("--seed", default=20, type=int)
 parser.add_argument("--device", default="cuda", type=str, choices=["cpu", "cuda"])
 
